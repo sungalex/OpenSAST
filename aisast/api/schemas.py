@@ -138,10 +138,18 @@ class TriageOut(BaseModel):
     model: str
 
 
+class ReferenceOut(BaseModel):
+    standard: str
+    id: str
+    title: str
+    url: str = ""
+
+
 class FindingOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    scan_id: str
     rule_id: str
     engine: str
     severity: str
@@ -154,7 +162,38 @@ class FindingOut(BaseModel):
     category: str | None
     language: str | None
     snippet: str | None
+    status: str = "new"
+    status_reason: str | None = None
+    reviewed_by: int | None = None
     triage: TriageOut | None = None
+    references: list[ReferenceOut] = Field(default_factory=list)
+
+
+class FindingStatusUpdate(BaseModel):
+    status: str = Field(
+        pattern="^(new|confirmed|exclusion_requested|excluded|fixed|rejected)$"
+    )
+    reason: str | None = None
+
+
+class FindingFilter(BaseModel):
+    scan_id: str | None = None
+    project_id: int | None = None
+    severity: list[str] | None = None
+    engines: list[str] | None = None
+    statuses: list[str] | None = None
+    mois_ids: list[str] | None = None
+    cwe_ids: list[str] | None = None
+    path_glob: str | None = None
+    text: str | None = None
+    limit: int = 100
+    offset: int = 0
+
+
+class NlQuery(BaseModel):
+    query: str
+    project_id: int | None = None
+    scan_id: str | None = None
 
 
 class MoisItemOut(BaseModel):
@@ -167,3 +206,103 @@ class MoisItemOut(BaseModel):
     primary_engines: list[str]
     secondary_engines: list[str]
     description: str
+    references: list[ReferenceOut] = Field(default_factory=list)
+
+
+class RuleSetCreate(BaseModel):
+    name: str
+    description: str = ""
+    enabled_engines: list[str] = Field(default_factory=list)
+    include_rules: list[str] = Field(default_factory=list)
+    exclude_rules: list[str] = Field(default_factory=list)
+    min_severity: str = "LOW"
+    is_default: bool = False
+
+
+class RuleSetOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    description: str
+    enabled_engines: list[str]
+    include_rules: list[str]
+    exclude_rules: list[str]
+    min_severity: str
+    is_default: bool
+
+
+class SuppressionCreate(BaseModel):
+    kind: str = Field(pattern="^(path|function|rule)$")
+    pattern: str
+    rule_id: str | None = None
+    reason: str = ""
+
+
+class SuppressionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    project_id: int
+    kind: str
+    pattern: str
+    rule_id: str | None
+    reason: str
+
+
+class GatePolicyIn(BaseModel):
+    project_id: int
+    max_high: int = 0
+    max_medium: int = 50
+    max_low: int = 500
+    max_new_high: int = 0
+    block_on_triage_fp_below: int = 30
+    enabled: bool = True
+
+
+class GatePolicyOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    project_id: int
+    max_high: int
+    max_medium: int
+    max_low: int
+    max_new_high: int
+    block_on_triage_fp_below: int
+    enabled: bool
+
+
+class GateCheckRequest(BaseModel):
+    project_id: int
+    scan_id: str | None = None
+    base_scan_id: str | None = None
+
+
+class GateCheckResult(BaseModel):
+    passed: bool
+    reasons: list[str]
+    counts: dict[str, int]
+    new_high: int = 0
+
+
+class AuditLogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: int | None
+    action: str
+    target_type: str | None
+    target_id: str | None
+    detail: dict[str, Any]
+    ip: str | None
+    created_at: datetime
+
+
+class ScanDiffOut(BaseModel):
+    base_scan_id: str | None
+    head_scan_id: str
+    new: list[FindingOut]
+    resolved: list[FindingOut]
+    persistent: int
+    summary: dict[str, int]

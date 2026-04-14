@@ -25,10 +25,16 @@ from fastapi import (
     UploadFile,
     status,
 )
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from aisast.api.deps import get_current_user, get_db
-from aisast.api.schemas import GitScanCreate, ScanCreate, ScanOut
+from aisast.api.schemas import (
+    GitScanCreate,
+    ScanCreate,
+    ScanDiffOut,
+    ScanOut,
+)
 from aisast.config import get_settings
 from aisast.db import models, repo
 from aisast.orchestrator.tasks import clone_and_scan_task, run_scan_task
@@ -172,6 +178,121 @@ def list_project_scans(
         ScanOut.model_validate(s)
         for s in repo.list_scans_for_project(db, project_id)
     ]
+
+
+@router.get("/{scan_id}/diff", response_model=ScanDiffOut)
+def diff_against_previous(
+    scan_id: str,
+    base: str | None = None,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(get_current_user),
+) -> ScanDiffOut:
+    """현재 스캔과 기준 스캔 사이의 신규/해결/지속 이슈 분류."""
+
+    from aisast.api.routes.findings import _finding_to_out
+
+    head = db.get(models.Scan, scan_id)
+    if head is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="scan not found")
+    if base is None:
+        prev = db.scalars(
+            select(models.Scan)
+            .where(
+                models.Scan.project_id == head.project_id,
+                models.Scan.id != head.id,
+                models.Scan.created_at < head.created_at,
+            )
+            .order_by(models.Scan.created_at.desc())
+            .limit(1)
+        ).first()
+        base_scan_id = prev.id if prev else None
+    else:
+        base_scan_id = base
+
+    head_rows = list(
+        db.scalars(select(models.Finding).where(models.Finding.scan_id == head.id))
+    )
+    base_rows: list[models.Finding] = []
+    if base_scan_id:
+        base_rows = list(
+            db.scalars(
+                select(models.Finding).where(models.Finding.scan_id == base_scan_id)
+            )
+        )
+
+    head_hashes = {h.finding_hash: h for h in head_rows}
+    base_hashes = {b.finding_hash: b for b in base_rows}
+    new_hashes = head_hashes.keys() - base_hashes.keys()
+    resolved_hashes = base_hashes.keys() - head_hashes.keys()
+    persistent = len(head_hashes.keys() & base_hashes.keys())
+
+    new_list = [_finding_to_out(head_hashes[h]) for h in sorted(new_hashes)]
+    resolved_list = [_finding_to_out(base_hashes[h]) for h in sorted(resolved_hashes)]
+    summary = {
+        "new": len(new_list),
+        "resolved": len(resolved_list),
+        "persistent": persistent,
+        "new_high": sum(1 for f in new_list if f.severity == "HIGH"),
+    }
+    return ScanDiffOut(
+        base_scan_id=base_scan_id,
+        head_scan_id=head.id,
+        new=new_list,
+        resolved=resolved_list,
+        persistent=persistent,
+        summary=summary,
+    )
+
+
+# ---------------------------------------------------------------------------
+# 소스 파일 뷰어 — 스캔 작업 디렉터리 내부 파일 읽기
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{scan_id}/source")
+def read_source_file(
+    scan_id: str,
+    path: str,
+    max_bytes: int = 512 * 1024,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(get_current_user),
+) -> dict:
+    """스캔 소스 루트 내 파일 내용을 반환 (경로 탈출 방지)."""
+
+    scan = db.get(models.Scan, scan_id)
+    if scan is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    root = Path(scan.source_path)
+    if not root.exists() or not root.is_dir():
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="소스 디렉터리가 정리되어 더 이상 조회할 수 없습니다",
+        )
+    candidate = (root / path).resolve()
+    root_resolved = root.resolve()
+    if not str(candidate).startswith(str(root_resolved)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="경로가 소스 루트를 벗어납니다",
+        )
+    if not candidate.exists() or not candidate.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    size = candidate.stat().st_size
+    if size > max_bytes:
+        return {
+            "path": str(candidate.relative_to(root_resolved)),
+            "truncated": True,
+            "size": size,
+            "content": candidate.read_bytes()[:max_bytes].decode(
+                "utf-8", errors="replace"
+            ),
+        }
+    return {
+        "path": str(candidate.relative_to(root_resolved)),
+        "truncated": False,
+        "size": size,
+        "content": candidate.read_text(encoding="utf-8", errors="replace"),
+    }
 
 
 # ---------------------------------------------------------------------------

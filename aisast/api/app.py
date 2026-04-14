@@ -5,10 +5,23 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from aisast.api.routes import auth, findings, mois, projects, reports, scans
+from aisast.api.routes import (
+    audit,
+    auth,
+    dashboard,
+    findings,
+    gate,
+    mois,
+    projects,
+    reports,
+    rule_sets,
+    scans,
+    suppressions,
+)
 from aisast.config import get_settings
 from aisast.db import repo
 from aisast.db.base import Base
+from aisast.db.migrate import auto_migrate
 from aisast.db.session import init_engine, session_scope
 
 
@@ -30,7 +43,7 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     def _startup() -> None:
         engine = init_engine(settings)
-        Base.metadata.create_all(engine)
+        auto_migrate(engine)
         with session_scope() as session:
             repo.ensure_bootstrap_admin(session, settings=settings)
 
@@ -44,6 +57,11 @@ def create_app() -> FastAPI:
     app.include_router(findings.router)
     app.include_router(reports.router)
     app.include_router(mois.router)
+    app.include_router(dashboard.router)
+    app.include_router(rule_sets.router)
+    app.include_router(suppressions.router)
+    app.include_router(gate.router)
+    app.include_router(audit.router)
     return app
 
 

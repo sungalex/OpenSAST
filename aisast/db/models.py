@@ -37,6 +37,9 @@ class Project(Base, TimestampMixin):
     repo_url: Mapped[str] = mapped_column(String(500), default="")
     default_language: Mapped[str | None] = mapped_column(String(32), nullable=True)
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    rule_set_id: Mapped[int | None] = mapped_column(
+        ForeignKey("rule_sets.id"), nullable=True
+    )
 
     scans: Mapped[list["Scan"]] = relationship(
         back_populates="project", cascade="all,delete-orphan"
@@ -87,6 +90,21 @@ class Finding(Base, TimestampMixin):
     language: Mapped[str | None] = mapped_column(String(32), nullable=True)
     snippet: Mapped[str | None] = mapped_column(Text, nullable=True)
     raw: Mapped[dict] = mapped_column(JSON, default=dict)
+    # Sparrow 스타일 이슈 상태 워크플로:
+    #   new: 미확인 (분석 직후)
+    #   confirmed: 개발자가 실제 취약점으로 확인
+    #   exclusion_requested: 오탐/허용으로 간주, 관리자 승인 대기
+    #   excluded: 관리자 승인 완료 — 카운트에서 제외
+    #   fixed: 조치 완료
+    #   rejected: 관리자 거부 — new 로 복귀하기 전 단계
+    status: Mapped[str] = mapped_column(String(32), default="new", nullable=False)
+    status_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     scan: Mapped[Scan] = relationship(back_populates="findings")
     triage: Mapped["TriageRecord | None"] = relationship(
@@ -109,3 +127,76 @@ class TriageRecord(Base, TimestampMixin):
     model: Mapped[str] = mapped_column(String(64), default="")
 
     finding: Mapped[Finding] = relationship(back_populates="triage")
+
+
+class RuleSet(Base, TimestampMixin):
+    """체커 그룹 — 프로젝트별 사용할 룰 화이트/블랙리스트.
+
+    Sparrow 의 '체커 그룹' 과 동일 개념. 엔진 허용 목록과 특정 규칙 ID 포함/제외 목록을
+    관리하며, 프로젝트가 참조하도록 FK 를 추가한다.
+    """
+
+    __tablename__ = "rule_sets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="")
+    enabled_engines: Mapped[list[str]] = mapped_column(JSON, default=list)
+    include_rules: Mapped[list[str]] = mapped_column(JSON, default=list)
+    exclude_rules: Mapped[list[str]] = mapped_column(JSON, default=list)
+    min_severity: Mapped[str] = mapped_column(String(16), default="LOW")
+    is_default: Mapped[bool] = mapped_column(default=False, nullable=False)
+
+
+class SuppressionRule(Base, TimestampMixin):
+    """경로·함수·룰 기반 탐지 제외 규칙."""
+
+    __tablename__ = "suppression_rules"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)  # path | function | rule
+    pattern: Mapped[str] = mapped_column(String(1024), nullable=False)
+    rule_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    reason: Mapped[str] = mapped_column(Text, default="")
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+
+
+class GatePolicy(Base, TimestampMixin):
+    """CI/CD 이관 제어(빌드 게이트) 정책.
+
+    프로젝트별로 단일 정책을 보유한다. 임계값을 초과하면 `/api/gate/check` 가 실패를
+    반환해 CI 파이프라인이 머지를 차단할 수 있다.
+    """
+
+    __tablename__ = "gate_policies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id"), unique=True, nullable=False
+    )
+    max_high: Mapped[int] = mapped_column(Integer, default=0)
+    max_medium: Mapped[int] = mapped_column(Integer, default=50)
+    max_low: Mapped[int] = mapped_column(Integer, default=500)
+    max_new_high: Mapped[int] = mapped_column(Integer, default=0)
+    block_on_triage_fp_below: Mapped[int] = mapped_column(Integer, default=30)
+    enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
+
+
+class AuditLog(Base):
+    """사용자 감사 로그."""
+
+    __tablename__ = "audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    target_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    target_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    detail: Mapped[dict] = mapped_column(JSON, default=dict)
+    ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+    )

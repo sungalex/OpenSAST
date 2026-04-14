@@ -9,6 +9,11 @@ from aisast.mois.catalog import (
     get_item,
     items_for_cwe,
 )
+from aisast.mois.references import (
+    ReferenceTag,
+    references_for_cwe,
+    references_for_cwes,
+)
 
 __all__ = [
     "MOIS_ITEMS",
@@ -18,4 +23,7 @@ __all__ = [
     "Severity",
     "get_item",
     "items_for_cwe",
+    "ReferenceTag",
+    "references_for_cwe",
+    "references_for_cwes",
 ]

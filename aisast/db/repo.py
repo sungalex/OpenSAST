@@ -119,6 +119,8 @@ def mark_scan_failed(session: Session, scan_id: str, *, error: str) -> None:
 def persist_scan_result(
     session: Session, scan_id: str, result: ScanResult
 ) -> None:
+    import fnmatch
+
     scan = session.get(models.Scan, scan_id)
     if scan is None:
         return
@@ -127,8 +129,37 @@ def persist_scan_result(
     scan.finished_at = result.finished_at
     scan.engine_stats = result.engine_stats
     scan.mois_coverage = result.mois_coverage
+
+    suppressions = list(
+        session.scalars(
+            select(models.SuppressionRule).where(
+                models.SuppressionRule.project_id == scan.project_id
+            )
+        )
+    )
+
+    def _is_suppressed(dom: DomainFinding) -> bool:
+        for rule in suppressions:
+            if rule.rule_id and rule.rule_id != dom.rule_id:
+                continue
+            if rule.kind == "rule" and rule.pattern == dom.rule_id:
+                return True
+            if rule.kind == "path" and fnmatch.fnmatch(
+                dom.location.file_path, rule.pattern
+            ):
+                return True
+            if rule.kind == "function" and rule.pattern in (
+                dom.location.snippet or ""
+            ):
+                return True
+        return False
+
     for dom in result.findings:
-        session.add(_finding_from_domain(scan_id, dom))
+        row = _finding_from_domain(scan_id, dom)
+        if _is_suppressed(dom):
+            row.status = "excluded"
+            row.status_reason = "auto-suppressed by project suppression rule"
+        session.add(row)
 
 
 def _finding_from_domain(scan_id: str, dom: DomainFinding) -> models.Finding:
@@ -172,6 +203,29 @@ def list_scans_for_project(
             .limit(limit)
         )
     )
+
+
+def record_audit(
+    session: Session,
+    *,
+    user_id: int | None,
+    action: str,
+    target_type: str | None = None,
+    target_id: str | None = None,
+    detail: dict | None = None,
+    ip: str | None = None,
+) -> models.AuditLog:
+    entry = models.AuditLog(
+        user_id=user_id,
+        action=action,
+        target_type=target_type,
+        target_id=str(target_id) if target_id is not None else None,
+        detail=detail or {},
+        ip=ip,
+    )
+    session.add(entry)
+    session.flush()
+    return entry
 
 
 def list_findings_for_scan(

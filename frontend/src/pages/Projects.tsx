@@ -144,14 +144,26 @@ export default function ProjectsPage() {
           {projects.map((p) => (
             <li
               key={p.id}
-              className={`py-2 cursor-pointer ${
+              className={`py-2 ${
                 selectedId === p.id
                   ? "font-semibold text-brand-accent"
                   : ""
               }`}
-              onClick={() => setSelectedId(p.id)}
             >
-              {p.name}
+              <div className="flex justify-between items-center">
+                <button
+                  className="text-left flex-1"
+                  onClick={() => setSelectedId(p.id)}
+                >
+                  {p.name}
+                </button>
+                <Link
+                  to={`/projects/${p.id}`}
+                  className="text-[10px] text-brand-accent underline"
+                >
+                  상세
+                </Link>
+              </div>
               <div className="text-xs text-slate-500 truncate">
                 {p.description || p.repo_url || "—"}
               </div>
