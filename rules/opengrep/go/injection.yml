@@ -1,0 +1,30 @@
+rules:
+  - id: mois-sr1-4-go-exec-command
+    metadata:
+      mois_id: "SR1-4"
+      cwe: "CWE-78"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+    languages: [go]
+    severity: ERROR
+    message: "exec.Command에 외부 입력이 포함된 문자열을 전달합니다. SR1-4."
+    patterns:
+      - pattern-either:
+          - pattern: exec.Command("sh", "-c", $X)
+          - pattern: exec.Command("bash", "-c", $X)
+          - pattern: exec.CommandContext($CTX, "sh", "-c", $X)
+
+  - id: mois-sr1-1-go-sql-concat
+    metadata:
+      mois_id: "SR1-1"
+      cwe: "CWE-89"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+    languages: [go]
+    severity: ERROR
+    message: "database/sql.DB.Query에 문자열 연결로 조립한 SQL을 전달합니다. SR1-1."
+    patterns:
+      - pattern-either:
+          - pattern: $DB.Query($QUERY + $X)
+          - pattern: $DB.QueryContext($CTX, $QUERY + $X)
+          - pattern: $DB.Exec(fmt.Sprintf("...", $X))

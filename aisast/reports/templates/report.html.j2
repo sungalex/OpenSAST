@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>aiSAST 보안약점 진단 결과 보고서</title>
+<style>
+  body { font-family: 'Noto Sans KR', sans-serif; max-width: 1100px; margin: 2rem auto; padding: 1rem; color: #1f2937; }
+  h1, h2, h3 { color: #0f172a; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
+  th, td { border: 1px solid #e5e7eb; padding: 0.5rem 0.75rem; text-align: left; vertical-align: top; }
+  th { background: #f1f5f9; }
+  .sev-HIGH { color: #b91c1c; font-weight: bold; }
+  .sev-MEDIUM { color: #c2410c; }
+  .sev-LOW { color: #1d4ed8; }
+  .badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 9999px; background: #e0e7ff; color: #3730a3; font-size: 0.75rem; }
+  .snippet { background: #0f172a; color: #f8fafc; padding: 0.5rem; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; white-space: pre-wrap; }
+  .tri-false_positive { color: #16a34a; }
+  .tri-true_positive { color: #dc2626; }
+  .tri-needs_review { color: #ca8a04; }
+</style>
+</head>
+<body>
+<h1>보안약점 진단 결과 보고서</h1>
+<p><strong>스캔 ID:</strong> {{ scan.id }}<br>
+<strong>대상 경로:</strong> {{ scan.source_path }}<br>
+<strong>시작:</strong> {{ scan.started_at }}<br>
+<strong>종료:</strong> {{ scan.finished_at }}<br>
+<strong>상태:</strong> {{ scan.status }}</p>
+
+<h2>진단 결과 요약</h2>
+<table>
+  <tr><th>심각도</th><th>건수</th></tr>
+  <tr><td class="sev-HIGH">HIGH</td><td>{{ severity_counts.HIGH|default(0) }}</td></tr>
+  <tr><td class="sev-MEDIUM">MEDIUM</td><td>{{ severity_counts.MEDIUM|default(0) }}</td></tr>
+  <tr><td class="sev-LOW">LOW</td><td>{{ severity_counts.LOW|default(0) }}</td></tr>
+  <tr><td><strong>합계</strong></td><td><strong>{{ findings|length }}</strong></td></tr>
+</table>
+
+<h2>행안부 49개 항목 커버리지</h2>
+<table>
+  <tr><th>MOIS ID</th><th>항목명</th><th>분류</th><th>탐지 건수</th></tr>
+  {% for item in mois_items %}
+  <tr>
+    <td>{{ item.id }}</td>
+    <td>{{ item.name_kr }}</td>
+    <td>{{ item.category }}</td>
+    <td>{{ mois_coverage.get(item.id, 0) }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h2>상세 탐지 결과</h2>
+{% for f in findings %}
+<section>
+  <h3>[{{ f.severity }}] {{ f.rule_id }}</h3>
+  <p>
+    <span class="badge">{{ f.engine }}</span>
+    {% if f.mois_id %}<span class="badge">MOIS: {{ f.mois_id }}</span>{% endif %}
+    {% for c in f.cwe_ids %}<span class="badge">{{ c }}</span>{% endfor %}
+  </p>
+  <p><strong>위치:</strong> {{ f.file_path }}:{{ f.start_line }}</p>
+  <p>{{ f.message }}</p>
+  {% if f.snippet %}<div class="snippet">{{ f.snippet }}</div>{% endif %}
+  {% if f.triage %}
+  <p class="tri-{{ f.triage.verdict }}">
+    <strong>LLM 판정:</strong> {{ f.triage.verdict }} (오탐 확률 {{ f.triage.fp_probability }}%)<br>
+    {{ f.triage.rationale }}
+  </p>
+  {% if f.triage.recommended_fix %}<p><strong>조치방안:</strong> {{ f.triage.recommended_fix }}</p>{% endif %}
+  {% if f.triage.patched_code %}<div class="snippet">{{ f.triage.patched_code }}</div>{% endif %}
+  {% endif %}
+</section>
+{% endfor %}
+</body>
+</html>

@@ -1,0 +1,45 @@
+rules:
+  - id: mois-sr1-3-js-innerhtml-xss
+    metadata:
+      mois_id: "SR1-3"
+      cwe: "CWE-79"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: |
+      innerHTML/outerHTML에 외부 입력이 바로 대입됩니다. SR1-3 XSS.
+      textContent 혹은 DOMPurify.sanitize를 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: $EL.innerHTML = $X
+          - pattern: $EL.outerHTML = $X
+          - pattern: document.write($X)
+
+  - id: mois-sr1-17-js-eval
+    metadata:
+      mois_id: "SR1-17"
+      cwe: "CWE-94"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: "eval/Function 생성자는 SR1-17 코드 삽입 위험."
+    patterns:
+      - pattern-either:
+          - pattern: eval($X)
+          - pattern: new Function($X)
+
+  - id: mois-sr1-4-js-child-process-shell
+    metadata:
+      mois_id: "SR1-4"
+      cwe: "CWE-78"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: "child_process.exec에 외부 입력이 결합된 문자열이 전달됩니다. SR1-4."
+    patterns:
+      - pattern-either:
+          - pattern: require('child_process').exec($X, ...)
+          - pattern: childProcess.exec($X, ...)

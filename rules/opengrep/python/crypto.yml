@@ -1,0 +1,49 @@
+rules:
+  - id: mois-sr2-4-python-weak-hash
+    metadata:
+      mois_id: "SR2-4"
+      cwe: "CWE-327"
+      category: "보안기능"
+      severity: "HIGH"
+    languages: [python]
+    severity: ERROR
+    message: |
+      md5/sha1은 충돌 공격에 취약합니다. SR2-4 취약한 암호화 알고리즘 사용.
+      비밀번호는 bcrypt/scrypt/argon2, 해시는 SHA-256 이상을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: hashlib.md5(...)
+          - pattern: hashlib.sha1(...)
+          - pattern: Crypto.Hash.MD5.new(...)
+
+  - id: mois-sr2-8-python-random
+    metadata:
+      mois_id: "SR2-8"
+      cwe: "CWE-330"
+      category: "보안기능"
+      severity: "MEDIUM"
+    languages: [python]
+    severity: WARNING
+    message: |
+      random 모듈은 CSPRNG이 아닙니다. SR2-8 적절하지 않은 난수. secrets 모듈 사용.
+    patterns:
+      - pattern-either:
+          - pattern: random.random()
+          - pattern: random.randint(...)
+          - pattern: random.choice(...)
+
+  - id: mois-sr2-11-python-disable-cert
+    metadata:
+      mois_id: "SR2-11"
+      cwe: "CWE-295"
+      category: "보안기능"
+      severity: "HIGH"
+    languages: [python]
+    severity: ERROR
+    message: "TLS 인증서 검증을 비활성화합니다. SR2-11 부적절한 인증서 유효성 검증."
+    patterns:
+      - pattern-either:
+          - pattern: requests.get($U, ..., verify=False, ...)
+          - pattern: requests.post($U, ..., verify=False, ...)
+          - pattern: ssl._create_unverified_context(...)
+          - pattern: urllib3.disable_warnings(...)

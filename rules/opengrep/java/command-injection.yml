@@ -1,0 +1,37 @@
+rules:
+  - id: mois-sr1-4-java-runtime-exec
+    metadata:
+      mois_id: "SR1-4"
+      cwe: "CWE-78"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+    languages: [java]
+    severity: ERROR
+    message: |
+      Runtime.exec()에 외부 입력이 포함된 문자열이 전달됩니다. SR1-4 OS 명령어 삽입.
+      화이트리스트 검증 및 ProcessBuilder + 고정 명령어 사용이 필요합니다.
+    patterns:
+      - pattern-either:
+          - pattern: Runtime.getRuntime().exec($CMD + $X)
+          - pattern: |
+              String $CMD = "..." + $X;
+              ...
+              Runtime.getRuntime().exec($CMD);
+          - pattern: new ProcessBuilder($CMD + $X)
+
+  - id: mois-sr1-2-java-path-traversal
+    metadata:
+      mois_id: "SR1-2"
+      cwe: "CWE-22"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+    languages: [java]
+    severity: ERROR
+    message: |
+      외부 입력이 파일 경로 생성에 직접 사용됩니다. SR1-2 경로 조작 및 자원 삽입.
+      Path.normalize() + startsWith(baseDir) 검증을 적용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: new java.io.File($REQ.getParameter($X))
+          - pattern: Files.readAllBytes(Paths.get($REQ.getParameter($X)))
+          - pattern: new FileInputStream($REQ.getParameter($X))

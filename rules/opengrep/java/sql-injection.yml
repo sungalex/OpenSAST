@@ -1,0 +1,45 @@
+rules:
+  - id: mois-sr1-1-java-sql-injection-concat
+    metadata:
+      mois_id: "SR1-1"
+      cwe: "CWE-89"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "JDBC에서 문자열 연결로 조립한 쿼리를 executeQuery/execute에 사용하면 SQL 삽입에 취약"
+      remediation: "PreparedStatement와 파라미터 바인딩(?) 사용"
+      references:
+        - https://cwe.mitre.org/data/definitions/89.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      JDBC Statement에 문자열 연결로 조립한 SQL이 전달되고 있습니다. SR1-1(CWE-89)
+      SQL 삽입 보안약점입니다. PreparedStatement와 ? 파라미터 바인딩을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $STMT.executeQuery($QUERY + $X)
+          - pattern: |
+              $STMT.execute($QUERY + $X)
+          - pattern: |
+              $STMT.executeUpdate($QUERY + $X)
+          - pattern: |
+              String $SQL = "..." + $X;
+              ...
+              $STMT.executeQuery($SQL);
+
+  - id: mois-sr1-1-mybatis-string-substitution
+    metadata:
+      mois_id: "SR1-1"
+      cwe: "CWE-89"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "MyBatis XML 매퍼에서 ${} 치환은 SQL 삽입에 취약"
+      remediation: "${} 대신 #{} 파라미터 바인딩 사용"
+    languages: [xml]
+    severity: ERROR
+    message: "MyBatis ${} 문자열 치환 사용. SR1-1 SQL 삽입. #{}로 변경하세요."
+    pattern-regex: "\\$\\{[^}]+\\}"
+    paths:
+      include:
+        - "**/mapper/**/*.xml"
+        - "**/*Mapper.xml"

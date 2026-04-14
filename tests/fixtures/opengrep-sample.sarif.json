@@ -1,0 +1,61 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "semgrep",
+          "version": "1.50.0",
+          "rules": [
+            {
+              "id": "mois-sr1-1-python-sql-fstring",
+              "name": "SQL Injection via f-string",
+              "shortDescription": { "text": "SR1-1 SQL 삽입" },
+              "properties": {
+                "tags": ["security", "CWE-89", "mois-SR1-1"],
+                "cwe": "CWE-89"
+              }
+            },
+            {
+              "id": "mois-sr2-4-python-weak-hash",
+              "name": "Weak hash",
+              "shortDescription": { "text": "SR2-4 취약한 해시" },
+              "properties": {
+                "tags": ["security", "CWE-327", "mois-SR2-4"],
+                "cwe": "CWE-327"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "mois-sr1-1-python-sql-fstring",
+          "level": "error",
+          "message": { "text": "SR1-1 SQL 삽입 탐지" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app/db.py" },
+                "region": { "startLine": 42, "endLine": 42 }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "mois-sr2-4-python-weak-hash",
+          "level": "warning",
+          "message": { "text": "md5 사용 탐지" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "app/crypto.py" },
+                "region": { "startLine": 7 }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

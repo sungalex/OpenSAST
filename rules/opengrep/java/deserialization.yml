@@ -1,0 +1,33 @@
+rules:
+  - id: mois-sr1-18-java-ois-readobject
+    metadata:
+      mois_id: "SR1-18"
+      cwe: "CWE-502"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+    languages: [java]
+    severity: ERROR
+    message: |
+      ObjectInputStream.readObject는 신뢰할 수 없는 입력을 역직렬화하면
+      원격 코드 실행이 가능합니다. SR1-18 신뢰할 수 없는 데이터 역직렬화.
+    patterns:
+      - pattern: |
+          ObjectInputStream $OIS = new ObjectInputStream($STREAM);
+          ...
+          $OIS.readObject();
+
+  - id: mois-sr1-11-java-ssrf-url
+    metadata:
+      mois_id: "SR1-11"
+      cwe: "CWE-918"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+    languages: [java]
+    severity: ERROR
+    message: |
+      외부 입력을 URL 생성에 사용해 SSRF가 가능합니다. 허용 도메인 목록(whitelist)과
+      DNS 리바인딩 방지 검증이 필요합니다. SR1-11 SSRF.
+    patterns:
+      - pattern-either:
+          - pattern: new java.net.URL($REQ.getParameter($X))
+          - pattern: java.net.http.HttpRequest.newBuilder(java.net.URI.create($REQ.getParameter($X)))

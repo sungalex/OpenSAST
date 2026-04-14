@@ -1,0 +1,114 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aisast
+      POSTGRES_PASSWORD: aisast
+      POSTGRES_DB: aisast
+    ports:
+      - "5432:5432"
+    volumes:
+      - aisast-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aisast"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - aisast-minio:/data
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - aisast-ollama:/root/.ollama
+
+  api:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      AISAST_DATABASE_URL: postgresql+psycopg2://aisast:aisast@postgres:5432/aisast
+      AISAST_REDIS_URL: redis://redis:6379/0
+      AISAST_CELERY_BROKER_URL: redis://redis:6379/1
+      AISAST_CELERY_RESULT_BACKEND: redis://redis:6379/2
+      AISAST_MINIO_ENDPOINT: minio:9000
+      AISAST_OLLAMA_HOST: http://ollama:11434
+      AISAST_LLM_PROVIDER: ollama
+      AISAST_BOOTSTRAP_ADMIN_EMAIL: admin@aisast.local
+      AISAST_BOOTSTRAP_ADMIN_PASSWORD: aisast-admin
+      AISAST_WORK_DIR: /var/aisast-work
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./rules:/app/rules:ro
+      - aisast-work:/var/aisast-work
+
+  worker:
+    build: .
+    command: celery -A aisast.orchestrator.celery_app.celery_app worker --loglevel=info --concurrency=2
+    depends_on:
+      - redis
+      - postgres
+    environment:
+      AISAST_DATABASE_URL: postgresql+psycopg2://aisast:aisast@postgres:5432/aisast
+      AISAST_CELERY_BROKER_URL: redis://redis:6379/1
+      AISAST_CELERY_RESULT_BACKEND: redis://redis:6379/2
+      AISAST_LLM_PROVIDER: ollama
+      AISAST_OLLAMA_HOST: http://ollama:11434
+      AISAST_WORK_DIR: /var/aisast-work
+    volumes:
+      - ./rules:/app/rules:ro
+      - aisast-work:/var/aisast-work
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    working_dir: /app
+    ports:
+      - "0.0.0.0:5173:5173"
+    environment:
+      NODE_ENV: development
+      VITE_API_TARGET: http://api:8000
+    # NOTE: 호스트 소스 바인드 마운트 + chokidar 폴링 조합이 macOS Docker Desktop 에서
+    # Vite 이벤트 루프를 D-state 로 묶어 HTTP 요청을 멈춘다. 안정성을 위해 빌드 타임에
+    # 구운 이미지 소스를 그대로 사용한다 (HMR 없음). 소스 수정 후:
+    #   docker compose build frontend && docker compose up -d frontend
+    tty: true
+    stdin_open: true
+    depends_on:
+      - api
+
+volumes:
+  aisast-postgres:
+  aisast-minio:
+  aisast-ollama:
+  aisast-node-modules:
+  aisast-work:

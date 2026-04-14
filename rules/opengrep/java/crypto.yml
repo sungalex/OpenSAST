@@ -1,0 +1,38 @@
+rules:
+  - id: mois-sr2-4-java-weak-cipher
+    metadata:
+      mois_id: "SR2-4"
+      cwe: "CWE-327"
+      category: "보안기능"
+      severity: "HIGH"
+    languages: [java]
+    severity: ERROR
+    message: |
+      취약한 암호 알고리즘을 사용하고 있습니다. SR2-4 취약한 암호화 알고리즘 사용.
+      AES/GCM, AES/CBC with PKCS5Padding + 안전한 IV, ChaCha20 등으로 교체하세요.
+    patterns:
+      - pattern-either:
+          - pattern: Cipher.getInstance("DES")
+          - pattern: Cipher.getInstance("DES/...")
+          - pattern: Cipher.getInstance("RC4")
+          - pattern: Cipher.getInstance("3DES")
+          - pattern: Cipher.getInstance("DESede")
+          - pattern: MessageDigest.getInstance("MD5")
+          - pattern: MessageDigest.getInstance("SHA1")
+          - pattern: MessageDigest.getInstance("SHA-1")
+
+  - id: mois-sr2-8-java-insecure-random
+    metadata:
+      mois_id: "SR2-8"
+      cwe: "CWE-330"
+      category: "보안기능"
+      severity: "MEDIUM"
+    languages: [java]
+    severity: WARNING
+    message: |
+      java.util.Random은 예측 가능한 난수를 생성합니다. 보안 목적이면
+      SR2-8에 따라 SecureRandom을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: new java.util.Random()
+          - pattern: Math.random()

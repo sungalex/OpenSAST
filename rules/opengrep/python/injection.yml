@@ -1,0 +1,66 @@
+rules:
+  - id: mois-sr1-1-python-sql-fstring
+    metadata:
+      mois_id: "SR1-1"
+      cwe: "CWE-89"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+    languages: [python]
+    severity: ERROR
+    message: |
+      f-string/문자열 포맷으로 SQL을 조립해 cursor.execute에 전달합니다.
+      SR1-1 SQL 삽입. 파라미터 바인딩(? 또는 %s)을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: $CUR.execute(f"...{$X}...")
+          - pattern: $CUR.execute("..." % $X)
+          - pattern: $CUR.execute("...".format($X))
+          - pattern: $CUR.executemany(f"...{$X}...")
+
+  - id: mois-sr1-4-python-shell-true
+    metadata:
+      mois_id: "SR1-4"
+      cwe: "CWE-78"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+    languages: [python]
+    severity: ERROR
+    message: |
+      subprocess.* shell=True + 동적 입력은 SR1-4 OS 명령어 삽입 위험. 고정 인자 리스트를
+      사용하고 shlex.quote로 이스케이프하거나 shell=False 를 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.run($X, shell=True, ...)
+          - pattern: subprocess.Popen($X, shell=True, ...)
+          - pattern: subprocess.call($X, shell=True, ...)
+          - pattern: os.system($X)
+
+  - id: mois-sr1-17-python-eval-exec
+    metadata:
+      mois_id: "SR1-17"
+      cwe: "CWE-94"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+    languages: [python]
+    severity: ERROR
+    message: "eval/exec에 동적 입력이 전달됩니다. SR1-17 코드 삽입."
+    patterns:
+      - pattern-either:
+          - pattern: eval($X)
+          - pattern: exec($X)
+
+  - id: mois-sr1-18-python-pickle-loads
+    metadata:
+      mois_id: "SR1-18"
+      cwe: "CWE-502"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+    languages: [python]
+    severity: ERROR
+    message: |
+      pickle.loads는 신뢰할 수 없는 데이터에 사용할 수 없습니다. SR1-18 역직렬화.
+    patterns:
+      - pattern-either:
+          - pattern: pickle.loads(...)
+          - pattern: pickle.load(...)
+          - pattern: yaml.load($X)

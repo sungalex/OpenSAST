@@ -1,0 +1,30 @@
+rules:
+  - id: mois-sr1-3-java-servlet-xss
+    metadata:
+      mois_id: "SR1-3"
+      cwe: "CWE-79"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+    languages: [java]
+    severity: ERROR
+    message: |
+      사용자 입력을 이스케이프 없이 HTTP 응답에 기록하고 있습니다. SR1-3 XSS.
+      OWASP Java Encoder(Encode.forHtml) 또는 Spring HtmlUtils.htmlEscape를 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: $RESP.getWriter().write($REQ.getParameter($X))
+          - pattern: $RESP.getWriter().print($REQ.getParameter($X))
+          - pattern: $RESP.getWriter().println($REQ.getParameter($X))
+
+  - id: mois-sr1-17-java-scripting-eval
+    metadata:
+      mois_id: "SR1-17"
+      cwe: "CWE-94"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+    languages: [java]
+    severity: ERROR
+    message: |
+      ScriptEngine.eval에 외부 입력이 직접 전달됩니다. SR1-17 코드 삽입.
+    patterns:
+      - pattern: $ENGINE.eval($REQ.getParameter($X))
