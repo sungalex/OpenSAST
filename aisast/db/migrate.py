@@ -92,9 +92,11 @@ def _column_ddl(table_name: str, column: Column[Any]) -> str | None:
         else:
             return None
     null_clause = "" if nullable else " NOT NULL"
+    # NOTE: `IF NOT EXISTS` 는 SQLite 가 지원하지 않는다. inspector 로 누락 컬럼을
+    # 사전 검사하므로 절을 생략해도 동일하게 안전하다. (Postgres/MySQL/SQLite 공통)
     return (
         f'ALTER TABLE "{table_name}" '
-        f'ADD COLUMN IF NOT EXISTS "{column.name}" {sql_type}{default_clause}{null_clause}'
+        f'ADD COLUMN "{column.name}" {sql_type}{default_clause}{null_clause}'
     )
 
 
