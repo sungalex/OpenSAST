@@ -12,6 +12,7 @@ rate limit 임계값 같은 보안·운영 관련 기본값만 조정된다.
 
 from __future__ import annotations
 
+import tempfile
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
@@ -22,6 +23,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_RULES_DIR = PROJECT_ROOT / "rules"
 DEFAULT_RESOURCES_DIR = PROJECT_ROOT / "aisast" / "resources"
+
+# 작업 디렉터리 기본값 — OS 독립적으로 tempfile.gettempdir() 을 사용한다.
+# Linux: /tmp/aisast-work, macOS: /var/folders/.../aisast-work,
+# Windows: %LOCALAPPDATA%/Temp/aisast-work (WSL2 는 Linux 처리)
+# Docker 환경에서는 compose 가 AISAST_WORK_DIR=/var/aisast-work 를 명시 주입한다.
+DEFAULT_WORK_DIR = Path(tempfile.gettempdir()) / "aisast-work"
 
 
 class Profile(str, Enum):
@@ -79,7 +86,7 @@ class Settings(BaseSettings):
     project_root: Path = PROJECT_ROOT
     rules_dir: Path = DEFAULT_RULES_DIR
     resources_dir: Path = DEFAULT_RESOURCES_DIR
-    work_dir: Path = PROJECT_ROOT / ".aisast-work"
+    work_dir: Path = DEFAULT_WORK_DIR
 
     # ---- 커스터마이징 오버레이 -----------------------------------------
     # 사용자가 패키지 업그레이드 후에도 보존할 리소스·룰 경로

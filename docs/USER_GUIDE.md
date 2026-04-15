@@ -1,6 +1,6 @@
 # aiSAST 사용자 가이드
 
-> **최신 업데이트 기준**: 2026-04-15 · 버전 0.4.0
+> **최신 업데이트 기준**: 2026-04-16 · 버전 0.4.1
 >
 > 이 문서는 aiSAST 전체 기능을 **설치·설정·사용·확장** 관점에서 상세히 설명한다.
 > 기능이 변경·추가·제거될 때마다 본 가이드도 함께 갱신된다.
@@ -49,6 +49,21 @@
 ---
 
 ## 2. 설치
+
+### 2.0 지원 OS 매트릭스
+
+| 등급 | OS | 실행 방법 | 상태 |
+|------|-----|-----------|------|
+| **Tier 1 — 완전 지원** | Linux x86_64 / arm64 (Ubuntu 22.04+, Debian 12+, RHEL 9+) | 로컬 pip 또는 Docker Compose | ✅ CI 정기 검증 |
+| **Tier 1 — 완전 지원** | macOS (Apple Silicon / Intel) | Docker Compose 권장 | ✅ CI 정기 검증 |
+| **Tier 2 — 권장 경로** | **Windows 10/11 + WSL2** | WSL 안에서 Docker Compose | ✅ CI smoke 검증, 상세 가이드: [docs/install-windows-wsl2.md](install-windows-wsl2.md) |
+| **Tier 3 — Best-effort** | macOS 네이티브 pip 설치 | `brew install pango cairo` 후 `pip install -e '.[dev]'` | 엔진 바이너리는 별도 수동 설치 필요 |
+| **Unsupported** | Windows 네이티브 | — | Semgrep/WeasyPrint/Celery prefork 호환성 문제로 **지원하지 않음**. WSL2 사용 권장 |
+| **Unsupported** | FreeBSD/OpenBSD | — | 공식 엔진 바이너리 없음 |
+
+> **결론**: macOS·Linux 는 네이티브/Docker 양쪽 지원, Windows 는 **WSL2 + Docker
+> Desktop** 을 통해서만 지원합니다. 상세 설치 가이드는
+> [install-windows-wsl2.md](install-windows-wsl2.md) 참조.
 
 ### 2.1 로컬 개발 환경
 
@@ -882,6 +897,33 @@ docker compose up -d frontend
 ## 17. 변경 이력
 
 > 기능이 수정/추가/제거될 때마다 본 섹션과 위 상세 섹션을 **동시에** 갱신한다.
+
+### 2026-04-16 (오후) — 이식성 & CI v0.4.1
+OS 종속성 감사 결과를 반영해 이식성을 높이고 CI 매트릭스를 도입.
+
+- **pyproject.toml 메타데이터 보강**: `Development Status`, OS, Python,
+  framework, topic, keywords, urls classifiers 추가. 버전 0.4.1. Windows 네이티브
+  가 classifier 에 명시적으로 없음을 확인(POSIX 계열만).
+- **`work_dir` 기본값 OS 중립화**: `Path(tempfile.gettempdir()) / "aisast-work"`.
+  Linux `/tmp`, macOS `/var/folders/...`, Windows `%LOCALAPPDATA%/Temp` 자동.
+  Docker compose 는 기존처럼 `/var/aisast-work` 를 명시 override.
+- **Celery pool 자동 선택**: `aisast/orchestrator/celery_app.py::recommended_pool()`.
+  `sys.platform` 감지해 Windows → `solo`, 그 외 → `prefork`.
+  `AISAST_CELERY_POOL` 환경변수로 강제 오버라이드 가능.
+- **Multi-arch Docker buildx**: `scripts/docker-build-multiarch.sh` — linux/amd64
+  + linux/arm64 동시 빌드. `AISAST_PUSH=true` 로 레지스트리 푸시.
+- **GitHub Actions CI**: `.github/workflows/ci.yml`:
+  - backend matrix: ubuntu-24.04 / macos-14 (full pytest) + windows-2022 (smoke
+    import + `recommended_pool() == 'solo'` 검증)
+  - frontend matrix: 3 OS 모두 vitest + `tsc -b --noEmit`
+  - docker-buildx 잡: linux/amd64 + linux/arm64 멀티아키 이미지 빌드
+  - self-sast 잡: aisast 가 자기 자신을 스캔, HIGH 발견 시 CI 실패
+- **Windows WSL2 설치 가이드** 신규 (`docs/install-windows-wsl2.md`):
+  전제·wsl 설치·Docker Desktop 통합·파일시스템 성능·CRLF 주의·트러블슈팅 9개
+  섹션. 왜 Windows 네이티브를 지원하지 않는지도 명시.
+- **USER_GUIDE §2.0**: 지원 OS 매트릭스 표 추가 (Tier 1/2/3/Unsupported).
+- **신규 테스트 2건**: `test_config_work_dir_default.py` (OS 중립 기본값 검증),
+  `test_celery_pool_selection.py` (플랫폼 감지 로직, env override).
 
 ### 2026-04-16 — 아키텍처 고도화 v0.4.0
 애플리케이션·데이터·보안 3개 관점에서 안정성·확장성·유지보수성·편의성을

@@ -4,12 +4,64 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aisast"
-version = "0.1.0"
-description = "Open-source SAST tool covering Korea MOIS 49 security weakness items"
+version = "0.4.1"
+description = "Open-source multi-engine SAST orchestrator covering Korea MOIS 49 security weakness items"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "Apache-2.0" }
 authors = [{ name = "aiSAST contributors" }]
+keywords = [
+    "sast",
+    "static-analysis",
+    "security",
+    "mois",
+    "korea",
+    "opengrep",
+    "semgrep",
+    "codeql",
+    "spotbugs",
+    "bandit",
+    "llm",
+    "fastapi",
+]
+classifiers = [
+    # Maturity
+    "Development Status :: 4 - Beta",
+
+    # Audience
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+
+    # License
+    "License :: OSI Approved :: Apache Software License",
+
+    # Natural language
+    "Natural Language :: Korean",
+    "Natural Language :: English",
+
+    # Supported OS — POSIX only (Linux / macOS)
+    # Windows 는 WSL2 또는 Docker Desktop 경유로만 지원. 네이티브 미지원.
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: BSD",
+
+    # Python
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3 :: Only",
+
+    # Framework / Topic
+    "Framework :: FastAPI",
+    "Framework :: Celery",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+
+    # Typing
+    "Typing :: Typed",
+]
+
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
@@ -44,6 +96,13 @@ dev = [
     "mypy>=1.10",
     "httpx>=0.27",
 ]
+
+[project.urls]
+Homepage = "https://github.com/sungalex/aiSAST"
+Documentation = "https://github.com/sungalex/aiSAST/blob/main/docs/USER_GUIDE.md"
+Architecture = "https://github.com/sungalex/aiSAST/blob/main/docs/ARCHITECTURE.md"
+Issues = "https://github.com/sungalex/aiSAST/issues"
+Repository = "https://github.com/sungalex/aiSAST"
 
 [project.scripts]
 aisast = "aisast.cli:app"
