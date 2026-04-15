@@ -8,7 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from aisast.api.routes.scans import _safe_extract_zip
+from aisast.services.scan_service import ScanService
+
+_safe_extract_zip = ScanService._safe_extract_zip
 
 
 def _write_zip(

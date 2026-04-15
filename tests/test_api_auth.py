@@ -65,7 +65,8 @@ def test_create_user_admin_succeeds(
         headers=admin_headers,
         json={
             "email": "third@example.com",
-            "password": "long-enough-pw",
+            # 정책: 12자 이상, upper+lower+digit+special 중 3종 이상
+            "password": "Compliant#Pass1",
             "display_name": "Third",
             "role": "viewer",
         },
@@ -75,6 +76,21 @@ def test_create_user_admin_succeeds(
     assert body["email"] == "third@example.com"
     assert body["role"] == "viewer"
     assert body["is_active"] is True
+
+
+def test_create_user_rejects_weak_password(
+    client: TestClient, admin_headers: dict[str, str]
+) -> None:
+    r = client.post(
+        "/api/auth/users",
+        headers=admin_headers,
+        json={
+            "email": "weak@example.com",
+            "password": "password1234",  # 흔한 비밀번호 + 문자 종류 부족
+            "role": "viewer",
+        },
+    )
+    assert r.status_code == 422
 
 
 def test_protected_route_without_token_returns_401(client: TestClient) -> None:

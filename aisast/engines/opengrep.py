@@ -26,24 +26,25 @@ class OpengrepEngine(Engine):
     supported_languages = ("java", "python", "javascript", "typescript", "go", "php", "ruby")
 
     def run(self, target: ScanTarget) -> EngineResult:
-        cfg_dir = self.settings.rules_dir / "opengrep"
+        cfg_dirs = self._collect_config_dirs()
         binary = self.settings.opengrep_bin
-        if not cfg_dir.exists():
-            log.warning("opengrep rules directory missing: %s", cfg_dir)
+        if not cfg_dirs:
+            log.warning("opengrep: no rule directories found")
         with tempfile.TemporaryDirectory(prefix="aisast-opengrep-") as tmp:
             sarif_path = Path(tmp) / "output.sarif"
-            cmd = [
-                binary,
-                "scan",
-                "--config",
-                str(cfg_dir),
-                "--sarif",
-                "--sarif-output",
-                str(sarif_path),
-                "--quiet",
-                "--error",
-                str(target.root),
-            ]
+            cmd = [binary, "scan"]
+            for cfg in cfg_dirs:
+                cmd.extend(["--config", str(cfg)])
+            cmd.extend(
+                [
+                    "--sarif",
+                    "--sarif-output",
+                    str(sarif_path),
+                    "--quiet",
+                    "--error",
+                    str(target.root),
+                ]
+            )
             start = time.time()
             try:
                 result = run_capture(cmd, timeout=900)
@@ -73,5 +74,20 @@ class OpengrepEngine(Engine):
                 returncode=result.returncode,
                 stdout_tail=self._tail(result.stdout),
                 stderr_tail=self._tail(result.stderr),
-                metadata={"rules_dir": str(cfg_dir)},
+                metadata={"rules_dirs": ",".join(str(c) for c in cfg_dirs)},
             )
+
+    def _collect_config_dirs(self) -> list[Path]:
+        """내장 + 커스텀 룰 디렉터리를 모두 반환.
+
+        업그레이드 시 내장 룰만 덮어쓰이고 사용자 커스텀 룰은 보존된다.
+        """
+
+        dirs: list[Path] = []
+        builtin = self.settings.rules_dir / "opengrep"
+        if builtin.exists():
+            dirs.append(builtin)
+        custom = self.settings.custom_rules_dir
+        if custom is not None and Path(custom).exists():
+            dirs.append(Path(custom))
+        return dirs

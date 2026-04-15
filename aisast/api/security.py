@@ -1,25 +1,25 @@
-"""JWT 발급·검증 및 비밀번호 해싱.
+"""인증·인가 핵심 헬퍼 — JWT · 비밀번호 해싱 · 정책 검증 · 계정 잠금.
 
-passlib는 2025년 기준 유지보수가 중단되었고 최신 bcrypt(>=4.1)와 호환성 문제가
-있어, 본 모듈은 `bcrypt` 라이브러리를 직접 사용한다. bcrypt는 72바이트까지만
-처리하므로 UTF-8 인코딩 후 상한을 적용한다.
+passlib 는 bcrypt>=4.1 과 호환 문제가 있어 사용하지 않는다. `bcrypt` 를 직접
+호출하며 UTF-8 NFC 정규화 후 72 바이트 상한을 적용한다.
 """
 
 from __future__ import annotations
 
+import unicodedata
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
 from jose import JWTError, jwt
 
-from aisast.config import get_settings
+from aisast.config import Settings, get_settings
 
 _ALGORITHM = "HS256"
 _BCRYPT_MAX_BYTES = 72
 
 
 def _prepare(plain: str) -> bytes:
-    return plain.encode("utf-8")[:_BCRYPT_MAX_BYTES]
+    return unicodedata.normalize("NFC", plain).encode("utf-8")[:_BCRYPT_MAX_BYTES]
 
 
 def hash_password(plain: str) -> str:
@@ -48,3 +48,91 @@ def decode_access_token(token: str) -> dict | None:
         return jwt.decode(token, settings.secret_key, algorithms=[_ALGORITHM])
     except JWTError:
         return None
+
+
+# ---------------------------------------------------------------------------
+# 비밀번호 정책
+# ---------------------------------------------------------------------------
+
+_COMMON_PASSWORDS = {
+    "password",
+    "passw0rd",
+    "12345678",
+    "qwerty123",
+    "admin123",
+    "letmein12",
+    "welcome1234",
+    "aisast-admin",
+    "qwerty1234",
+    "iloveyou123",
+    "monkey1234",
+    "dragon1234",
+    "master123",
+}
+
+
+class PasswordPolicyError(ValueError):
+    """비밀번호 정책 위반."""
+
+
+def validate_password_policy(
+    password: str, *, settings: Settings | None = None
+) -> None:
+    """정책 위반 시 `PasswordPolicyError` 를 raise."""
+
+    settings = settings or get_settings()
+    if len(password) < settings.password_min_length:
+        raise PasswordPolicyError(
+            f"password must be at least {settings.password_min_length} characters"
+        )
+    classes = sum(
+        bool(fn(password))
+        for fn in (
+            lambda s: any(c.islower() for c in s),
+            lambda s: any(c.isupper() for c in s),
+            lambda s: any(c.isdigit() for c in s),
+            lambda s: any(not c.isalnum() for c in s),
+        )
+    )
+    if classes < settings.password_required_classes:
+        raise PasswordPolicyError(
+            f"password must include at least {settings.password_required_classes} "
+            "of: lowercase, uppercase, digit, special"
+        )
+    if password.lower() in _COMMON_PASSWORDS:
+        raise PasswordPolicyError("password is in the common-passwords blacklist")
+    for i in range(len(password) - 3):
+        if password[i] == password[i + 1] == password[i + 2] == password[i + 3]:
+            raise PasswordPolicyError("password contains 4+ repeated characters")
+
+
+# ---------------------------------------------------------------------------
+# 계정 잠금
+# ---------------------------------------------------------------------------
+
+
+def is_user_locked(user, *, now: datetime | None = None) -> bool:
+    now = now or datetime.now(timezone.utc)
+    locked_until = getattr(user, "locked_until", None)
+    if locked_until is None:
+        return False
+    if locked_until.tzinfo is None:
+        locked_until = locked_until.replace(tzinfo=timezone.utc)
+    return locked_until > now
+
+
+def register_failed_login(user, *, settings: Settings | None = None) -> bool:
+    settings = settings or get_settings()
+    user.failed_attempts = (getattr(user, "failed_attempts", 0) or 0) + 1
+    if user.failed_attempts >= settings.failed_login_threshold:
+        user.locked_until = datetime.now(timezone.utc) + timedelta(
+            minutes=settings.failed_login_lockout_minutes
+        )
+        return True
+    return False
+
+
+def clear_login_failures(user) -> None:
+    user.failed_attempts = 0
+    user.locked_until = None
+    user.last_login_at = datetime.now(timezone.utc)

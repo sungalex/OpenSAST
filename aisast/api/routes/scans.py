@@ -1,31 +1,16 @@
-"""스캔 작업 큐잉·조회 라우트.
-
-소스 코드 지정 3가지 모드:
-  1. 서버 경로 — `POST /api/scans`: api/worker 컨테이너가 이미 볼 수 있는 경로
-  2. ZIP 업로드 — `POST /api/scans/upload`: 브라우저에서 .zip 파일 업로드
-  3. Git URL — `POST /api/scans/git`: 공개/토큰 포함 URL을 worker 가 clone 후 스캔
-
-②와 ③은 `settings.work_dir` 아래 임시 디렉터리에 풀어지며, api·worker 가 동일한
-경로를 볼 수 있도록 compose 의 `aisast-work` 볼륨을 공유한다.
-"""
+"""스캔 라우트 — 얇은 HTTP 어댑터 (ScanService 위임)."""
 
 from __future__ import annotations
-
-import shutil
-import uuid
-import zipfile
-from pathlib import Path
 
 from fastapi import (
     APIRouter,
     Depends,
     File,
     Form,
-    HTTPException,
+    Request,
     UploadFile,
     status,
 )
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from aisast.api.deps import get_current_user, get_db
@@ -35,124 +20,85 @@ from aisast.api.schemas import (
     ScanDiffOut,
     ScanOut,
 )
-from aisast.config import get_settings
-from aisast.db import models, repo
-from aisast.orchestrator.tasks import clone_and_scan_task, run_scan_task
-from aisast.utils.logging import get_logger
-from aisast.utils.paths import ensure_dir
-
-log = get_logger(__name__)
+from aisast.db import models
+from aisast.services import ActorContext, ScanService, ServiceError
 
 router = APIRouter(prefix="/api/scans", tags=["scans"])
 
-_MAX_UPLOAD_BYTES = 500 * 1024 * 1024  # 500 MiB
-_ALLOWED_UPLOAD_SUFFIXES = {".zip"}
+
+def _actor(request: Request, user: models.User) -> ActorContext:
+    return ActorContext(
+        user=user,
+        ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
 
 
 @router.post("", response_model=ScanOut, status_code=status.HTTP_202_ACCEPTED)
 def queue_scan(
     payload: ScanCreate,
+    request: Request,
     db: Session = Depends(get_db),
-    _: models.User = Depends(get_current_user),
+    user: models.User = Depends(get_current_user),
 ) -> ScanOut:
-    """기존 방식: 서버 파일시스템 경로를 받아 큐잉."""
-
-    project = _get_project_or_404(db, payload.project_id)
-    scan_id = uuid.uuid4().hex[:12]
-    repo.create_scan_record(
-        db,
-        scan_id=scan_id,
-        project_id=project.id,
-        source_path=payload.source_path,
-    )
-    db.commit()
-    run_scan_task.delay(
-        scan_id,
-        payload.source_path,
-        payload.enable_second_pass,
-        payload.enable_triage,
-        payload.language_hint,
-    )
-    scan = db.get(models.Scan, scan_id)
+    svc = ScanService(db, _actor(request, user))
+    try:
+        scan = svc.queue_from_path(
+            project_id=payload.project_id,
+            source_path=payload.source_path,
+            language_hint=payload.language_hint,
+            enable_second_pass=payload.enable_second_pass,
+            enable_triage=payload.enable_triage,
+        )
+    except ServiceError as exc:
+        raise exc.as_http() from exc
     return ScanOut.model_validate(scan)
 
 
 @router.post("/upload", response_model=ScanOut, status_code=status.HTTP_202_ACCEPTED)
 def upload_and_scan(
+    request: Request,
     project_id: int = Form(...),
     language_hint: str | None = Form(None),
     enable_second_pass: bool = Form(True),
     enable_triage: bool = Form(True),
     archive: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: models.User = Depends(get_current_user),
+    user: models.User = Depends(get_current_user),
 ) -> ScanOut:
-    """브라우저에서 업로드한 ZIP 아카이브를 풀고 스캔."""
-
-    project = _get_project_or_404(db, project_id)
-    _validate_archive(archive)
-
-    settings = get_settings()
-    scan_id = uuid.uuid4().hex[:12]
-    work_root = Path(settings.work_dir)
-    scan_root = work_root / "sources" / scan_id
-    archive_path = work_root / "uploads" / f"{scan_id}.zip"
-    ensure_dir(scan_root)
-    ensure_dir(archive_path.parent)
-
-    total = _stream_upload_to_disk(archive, archive_path)
-    log.info("scan %s uploaded %d bytes", scan_id, total)
-
+    svc = ScanService(db, _actor(request, user))
     try:
-        _safe_extract_zip(archive_path, scan_root)
-    except Exception as exc:
-        shutil.rmtree(scan_root, ignore_errors=True)
-        archive_path.unlink(missing_ok=True)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"zip 압축 해제 실패: {exc}",
-        ) from exc
-    finally:
-        archive_path.unlink(missing_ok=True)
-
-    source_path = str(scan_root)
-    repo.create_scan_record(
-        db, scan_id=scan_id, project_id=project.id, source_path=source_path
-    )
-    db.commit()
-    run_scan_task.delay(
-        scan_id, source_path, enable_second_pass, enable_triage, language_hint
-    )
-    scan = db.get(models.Scan, scan_id)
+        scan = svc.queue_from_upload(
+            project_id=project_id,
+            archive=archive,
+            language_hint=language_hint,
+            enable_second_pass=enable_second_pass,
+            enable_triage=enable_triage,
+        )
+    except ServiceError as exc:
+        raise exc.as_http() from exc
     return ScanOut.model_validate(scan)
 
 
 @router.post("/git", response_model=ScanOut, status_code=status.HTTP_202_ACCEPTED)
 def clone_and_scan(
     payload: GitScanCreate,
+    request: Request,
     db: Session = Depends(get_db),
-    _: models.User = Depends(get_current_user),
+    user: models.User = Depends(get_current_user),
 ) -> ScanOut:
-    """Git 원격 저장소를 clone 한 뒤 스캔."""
-
-    project = _get_project_or_404(db, payload.project_id)
-    scan_id = uuid.uuid4().hex[:12]
-    repo.create_scan_record(
-        db,
-        scan_id=scan_id,
-        project_id=project.id,
-        source_path=f"git:{payload.git_url}@{payload.branch or 'HEAD'}",
-    )
-    db.commit()
-    clone_and_scan_task.delay(
-        scan_id,
-        payload.git_url,
-        payload.branch,
-        payload.enable_second_pass,
-        payload.enable_triage,
-        payload.language_hint,
-    )
-    scan = db.get(models.Scan, scan_id)
+    svc = ScanService(db, _actor(request, user))
+    try:
+        scan = svc.queue_from_git(
+            project_id=payload.project_id,
+            git_url=payload.git_url,
+            branch=payload.branch,
+            language_hint=payload.language_hint,
+            enable_second_pass=payload.enable_second_pass,
+            enable_triage=payload.enable_triage,
+        )
+    except ServiceError as exc:
+        raise exc.as_http() from exc
     return ScanOut.model_validate(scan)
 
 
@@ -160,11 +106,12 @@ def clone_and_scan(
 def get_scan(
     scan_id: str,
     db: Session = Depends(get_db),
-    _: models.User = Depends(get_current_user),
+    user: models.User = Depends(get_current_user),
 ) -> ScanOut:
-    scan = db.get(models.Scan, scan_id)
-    if scan is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    try:
+        scan = ScanService(db).get(scan_id)
+    except ServiceError as exc:
+        raise exc.as_http() from exc
     return ScanOut.model_validate(scan)
 
 
@@ -172,12 +119,10 @@ def get_scan(
 def list_project_scans(
     project_id: int,
     db: Session = Depends(get_db),
-    _: models.User = Depends(get_current_user),
+    user: models.User = Depends(get_current_user),
 ) -> list[ScanOut]:
-    return [
-        ScanOut.model_validate(s)
-        for s in repo.list_scans_for_project(db, project_id)
-    ]
+    svc = ScanService(db)
+    return [ScanOut.model_validate(s) for s in svc.list_for_project(project_id)]
 
 
 @router.get("/{scan_id}/diff", response_model=ScanDiffOut)
@@ -185,68 +130,22 @@ def diff_against_previous(
     scan_id: str,
     base: str | None = None,
     db: Session = Depends(get_db),
-    _: models.User = Depends(get_current_user),
+    user: models.User = Depends(get_current_user),
 ) -> ScanDiffOut:
-    """현재 스캔과 기준 스캔 사이의 신규/해결/지속 이슈 분류."""
-
     from aisast.api.routes.findings import _finding_to_out
 
-    head = db.get(models.Scan, scan_id)
-    if head is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="scan not found")
-    if base is None:
-        prev = db.scalars(
-            select(models.Scan)
-            .where(
-                models.Scan.project_id == head.project_id,
-                models.Scan.id != head.id,
-                models.Scan.created_at < head.created_at,
-            )
-            .order_by(models.Scan.created_at.desc())
-            .limit(1)
-        ).first()
-        base_scan_id = prev.id if prev else None
-    else:
-        base_scan_id = base
-
-    head_rows = list(
-        db.scalars(select(models.Finding).where(models.Finding.scan_id == head.id))
-    )
-    base_rows: list[models.Finding] = []
-    if base_scan_id:
-        base_rows = list(
-            db.scalars(
-                select(models.Finding).where(models.Finding.scan_id == base_scan_id)
-            )
-        )
-
-    head_hashes = {h.finding_hash: h for h in head_rows}
-    base_hashes = {b.finding_hash: b for b in base_rows}
-    new_hashes = head_hashes.keys() - base_hashes.keys()
-    resolved_hashes = base_hashes.keys() - head_hashes.keys()
-    persistent = len(head_hashes.keys() & base_hashes.keys())
-
-    new_list = [_finding_to_out(head_hashes[h]) for h in sorted(new_hashes)]
-    resolved_list = [_finding_to_out(base_hashes[h]) for h in sorted(resolved_hashes)]
-    summary = {
-        "new": len(new_list),
-        "resolved": len(resolved_list),
-        "persistent": persistent,
-        "new_high": sum(1 for f in new_list if f.severity == "HIGH"),
-    }
+    try:
+        diff = ScanService(db).diff(scan_id, base=base)
+    except ServiceError as exc:
+        raise exc.as_http() from exc
     return ScanDiffOut(
-        base_scan_id=base_scan_id,
-        head_scan_id=head.id,
-        new=new_list,
-        resolved=resolved_list,
-        persistent=persistent,
-        summary=summary,
+        base_scan_id=diff["base_scan_id"],
+        head_scan_id=diff["head_scan_id"],
+        new=[_finding_to_out(f) for f in diff["new"]],
+        resolved=[_finding_to_out(f) for f in diff["resolved"]],
+        persistent=diff["persistent"],
+        summary=diff["summary"],
     )
-
-
-# ---------------------------------------------------------------------------
-# 소스 파일 뷰어 — 스캔 작업 디렉터리 내부 파일 읽기
-# ---------------------------------------------------------------------------
 
 
 @router.get("/{scan_id}/source")
@@ -255,98 +154,9 @@ def read_source_file(
     path: str,
     max_bytes: int = 512 * 1024,
     db: Session = Depends(get_db),
-    _: models.User = Depends(get_current_user),
+    user: models.User = Depends(get_current_user),
 ) -> dict:
-    """스캔 소스 루트 내 파일 내용을 반환 (경로 탈출 방지)."""
-
-    scan = db.get(models.Scan, scan_id)
-    if scan is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    root = Path(scan.source_path)
-    if not root.exists() or not root.is_dir():
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail="소스 디렉터리가 정리되어 더 이상 조회할 수 없습니다",
-        )
-    candidate = (root / path).resolve()
-    root_resolved = root.resolve()
-    if not str(candidate).startswith(str(root_resolved)):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="경로가 소스 루트를 벗어납니다",
-        )
-    if not candidate.exists() or not candidate.is_file():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    size = candidate.stat().st_size
-    if size > max_bytes:
-        return {
-            "path": str(candidate.relative_to(root_resolved)),
-            "truncated": True,
-            "size": size,
-            "content": candidate.read_bytes()[:max_bytes].decode(
-                "utf-8", errors="replace"
-            ),
-        }
-    return {
-        "path": str(candidate.relative_to(root_resolved)),
-        "truncated": False,
-        "size": size,
-        "content": candidate.read_text(encoding="utf-8", errors="replace"),
-    }
-
-
-# ---------------------------------------------------------------------------
-# 내부 헬퍼
-# ---------------------------------------------------------------------------
-
-
-def _get_project_or_404(db: Session, project_id: int) -> models.Project:
-    project = db.get(models.Project, project_id)
-    if project is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="project not found"
-        )
-    return project
-
-
-def _validate_archive(archive: UploadFile) -> None:
-    name = (archive.filename or "").lower()
-    suffix = Path(name).suffix
-    if suffix not in _ALLOWED_UPLOAD_SUFFIXES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"지원하지 않는 형식: {suffix or '없음'} — .zip 만 가능",
-        )
-
-
-def _stream_upload_to_disk(archive: UploadFile, dest: Path) -> int:
-    total = 0
-    chunk_size = 1024 * 1024
-    with dest.open("wb") as f:
-        while True:
-            chunk = archive.file.read(chunk_size)
-            if not chunk:
-                break
-            total += len(chunk)
-            if total > _MAX_UPLOAD_BYTES:
-                dest.unlink(missing_ok=True)
-                raise HTTPException(
-                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                    detail=f"업로드 크기 제한 초과 ({_MAX_UPLOAD_BYTES} bytes)",
-                )
-            f.write(chunk)
-    return total
-
-
-def _safe_extract_zip(archive_path: Path, dest_dir: Path) -> None:
-    """Zip-slip 방지 압축 해제."""
-
-    dest_resolved = dest_dir.resolve()
-    with zipfile.ZipFile(archive_path) as zf:
-        for member in zf.infolist():
-            member_path = (dest_dir / member.filename).resolve()
-            if not str(member_path).startswith(str(dest_resolved)):
-                raise ValueError(
-                    f"zip 엔트리가 대상 경로를 벗어납니다: {member.filename}"
-                )
-        zf.extractall(dest_dir)
+    try:
+        return ScanService(db).read_source(scan_id, path=path, max_bytes=max_bytes)
+    except ServiceError as exc:
+        raise exc.as_http() from exc

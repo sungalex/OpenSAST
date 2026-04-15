@@ -1,45 +1,52 @@
-"""프로젝트 CRUD 라우트."""
+"""프로젝트 CRUD 라우트 (ProjectService 위임)."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
 from aisast.api.deps import get_current_user, get_db
 from aisast.api.schemas import ProjectCreate, ProjectOut
-from aisast.db import models, repo
+from aisast.db import models
+from aisast.services import ActorContext, ProjectService, ServiceError
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
+
+
+def _actor(request: Request, user: models.User) -> ActorContext:
+    return ActorContext(
+        user=user,
+        ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
 
 
 @router.get("", response_model=list[ProjectOut])
 def list_projects_route(
     db: Session = Depends(get_db),
-    _: models.User = Depends(get_current_user),
+    user: models.User = Depends(get_current_user),
 ) -> list[ProjectOut]:
-    return [ProjectOut.model_validate(p) for p in repo.list_projects(db)]
+    svc = ProjectService(db)
+    return [ProjectOut.model_validate(p) for p in svc.list_all()]
 
 
 @router.post("", response_model=ProjectOut, status_code=status.HTTP_201_CREATED)
 def create_project_route(
     payload: ProjectCreate,
+    request: Request,
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ) -> ProjectOut:
-    if repo.get_project_by_name(db, payload.name) is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="project name already used"
+    svc = ProjectService(db, _actor(request, user))
+    try:
+        project = svc.create(
+            name=payload.name,
+            description=payload.description,
+            repo_url=payload.repo_url,
+            default_language=payload.default_language,
         )
-    project = repo.create_project(
-        db,
-        name=payload.name,
-        description=payload.description,
-        repo_url=payload.repo_url,
-        default_language=payload.default_language,
-        owner_id=user.id,
-    )
-    db.commit()
-    db.refresh(project)
+    except ServiceError as exc:
+        raise exc.as_http() from exc
     return ProjectOut.model_validate(project)
 
 
@@ -47,9 +54,11 @@ def create_project_route(
 def get_project_route(
     project_id: int,
     db: Session = Depends(get_db),
-    _: models.User = Depends(get_current_user),
+    user: models.User = Depends(get_current_user),
 ) -> ProjectOut:
-    project = db.get(models.Project, project_id)
-    if project is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    svc = ProjectService(db)
+    try:
+        project = svc.get(project_id)
+    except ServiceError as exc:
+        raise exc.as_http() from exc
     return ProjectOut.model_validate(project)

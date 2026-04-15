@@ -163,7 +163,8 @@ def analyst_user(client: TestClient, admin_headers: dict[str, str]) -> dict:
         headers=admin_headers,
         json={
             "email": "analyst@aisast.local",
-            "password": "analyst-pw-12345",
+            # 정책 준수: 12자 이상, upper+lower+digit+special 중 3종 이상
+            "password": "AnalystPass#1",
             "display_name": "Tester",
             "role": "analyst",
         },
@@ -174,7 +175,7 @@ def analyst_user(client: TestClient, admin_headers: dict[str, str]) -> dict:
 
 @pytest.fixture
 def analyst_token(client: TestClient, analyst_user: dict) -> str:
-    return _login(client, "analyst@aisast.local", "analyst-pw-12345")
+    return _login(client, "analyst@aisast.local", "AnalystPass#1")
 
 
 @pytest.fixture

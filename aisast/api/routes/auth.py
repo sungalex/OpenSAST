@@ -1,4 +1,4 @@
-"""인증 라우트: 로그인 · 사용자 생성."""
+"""인증 라우트: 로그인 · 사용자 생성 · 계정 잠금."""
 
 from __future__ import annotations
 
@@ -7,7 +7,16 @@ from sqlalchemy.orm import Session
 
 from aisast.api.deps import get_db, require_role
 from aisast.api.schemas import LoginRequest, TokenResponse, UserCreate, UserOut
-from aisast.api.security import create_access_token, hash_password, verify_password
+from aisast.api.security import (
+    PasswordPolicyError,
+    clear_login_failures,
+    create_access_token,
+    hash_password,
+    is_user_locked,
+    register_failed_login,
+    validate_password_policy,
+    verify_password,
+)
 from aisast.db import models, repo
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -20,19 +29,66 @@ def login(
     db: Session = Depends(get_db),
 ) -> TokenResponse:
     user = db.query(models.User).filter_by(email=payload.email).first()
-    if user is None or not verify_password(payload.password, user.hashed_password):
+    ip = request.client.host if request.client else None
+
+    if user is None:
         repo.record_audit(
             db,
             user_id=None,
             action="auth.login_failed",
             target_type="user",
             target_id=payload.email,
-            ip=request.client.host if request.client else None,
+            detail={"reason": "unknown_user"},
+            ip=ip,
         )
         db.commit()
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid credentials",
+        )
+
+    if is_user_locked(user):
+        repo.record_audit(
+            db,
+            user_id=user.id,
+            action="auth.login_locked",
+            target_type="user",
+            target_id=str(user.id),
+            detail={"locked_until": str(user.locked_until)},
+            ip=ip,
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_423_LOCKED,
+            detail="계정이 잠겨 있습니다. 잠시 후 다시 시도하세요.",
+        )
+
+    if not verify_password(payload.password, user.hashed_password):
+        newly_locked = register_failed_login(user)
+        repo.record_audit(
+            db,
+            user_id=user.id,
+            action="auth.login_failed",
+            target_type="user",
+            target_id=str(user.id),
+            detail={
+                "attempts": user.failed_attempts,
+                "locked": newly_locked,
+            },
+            ip=ip,
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid credentials",
+        )
+
     if not user.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="inactive user")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="inactive user"
+        )
+
+    clear_login_failures(user)
     token = create_access_token(user.email, user.role)
     repo.record_audit(
         db,
@@ -40,16 +96,27 @@ def login(
         action="auth.login",
         target_type="user",
         target_id=str(user.id),
-        ip=request.client.host if request.client else None,
+        ip=ip,
     )
     db.commit()
     return TokenResponse(access_token=token, role=user.role)
 
 
-@router.post("/users", response_model=UserOut, dependencies=[Depends(require_role("admin"))])
+@router.post(
+    "/users",
+    response_model=UserOut,
+    dependencies=[Depends(require_role("admin"))],
+)
 def create_user(payload: UserCreate, db: Session = Depends(get_db)) -> UserOut:
     if db.query(models.User).filter_by(email=payload.email).first() is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="user exists")
+    try:
+        validate_password_policy(payload.password)
+    except PasswordPolicyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
     user = models.User(
         email=payload.email,
         hashed_password=hash_password(payload.password),

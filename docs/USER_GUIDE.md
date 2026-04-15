@@ -1,6 +1,6 @@
 # aiSAST 사용자 가이드
 
-> **최신 업데이트 기준**: 2026-04-15 · 버전 0.3.1
+> **최신 업데이트 기준**: 2026-04-15 · 버전 0.4.0
 >
 > 이 문서는 aiSAST 전체 기능을 **설치·설정·사용·확장** 관점에서 상세히 설명한다.
 > 기능이 변경·추가·제거될 때마다 본 가이드도 함께 갱신된다.
@@ -28,6 +28,7 @@
 17. [변경 이력](#17-변경-이력)
 18. [Sparrow SAST 대비 기능 비교](#18-sparrow-sast-대비-기능-비교)
 19. [엔터프라이즈 기능 (이슈 워크플로 · 게이트 · 감사)](#19-엔터프라이즈-기능)
+20. [확장 / 커스터마이징 가이드](#20-확장--커스터마이징-가이드)
 
 ---
 
@@ -670,7 +671,7 @@ React Router v6 + Zustand + Axios.
 pytest -q
 ```
 
-현재 **백엔드 102 + 프론트엔드 26 = 총 128 테스트** 통과.
+현재 **백엔드 136 + 프론트엔드 26 = 총 162 테스트** 통과.
 
 #### 단위 테스트
 
@@ -881,6 +882,70 @@ docker compose up -d frontend
 ## 17. 변경 이력
 
 > 기능이 수정/추가/제거될 때마다 본 섹션과 위 상세 섹션을 **동시에** 갱신한다.
+
+### 2026-04-16 — 아키텍처 고도화 v0.4.0
+애플리케이션·데이터·보안 3개 관점에서 안정성·확장성·유지보수성·편의성을
+극대화하는 대규모 리팩토링. 144→162 테스트. 신규 문서 `docs/ARCHITECTURE.md`.
+
+- **플러그인 레지스트리** (`aisast/plugins/`): 5개 카테고리(engines, llm,
+  reports, references, hooks) 공통 `Registry` 구현. entry_points + 런타임
+  등록 양쪽 지원. 내장 플러그인도 동일 경로로 등록. `AISAST_PLUGINS_DISABLED`
+  로 선택 비활성.
+- **서비스 계층** (`aisast/services/`): `ProjectService`, `ScanService`,
+  `FindingService`, `GateService`, `RuleSetService`, `SuppressionService` +
+  공통 `BaseService` + `ActorContext`. 라우트는 얇은 HTTP 어댑터로 축소,
+  비즈니스 규칙·트랜잭션·감사 로그·RBAC 를 서비스가 책임. 모든 기존 라우트
+  재작성(projects/scans/findings/rule_sets/suppressions/gate).
+- **확장 훅** (`aisast/hooks.py`): `ScanHook` Protocol + `emit()` 헬퍼.
+  파이프라인 `pre_scan/post_scan` + FindingService `on_status_change` 자동
+  발행. 한 훅 예외가 다른 훅을 막지 않도록 격리.
+- **설정 프로파일** (`aisast/config.py`): `Profile ∈ {local, docker, cloud}`
+  + 프로파일별 기본값 번들. `apply_profile_defaults()` + `validate_profile()`.
+  cloud 는 docs 비활성·HSTS 강제·secret 강도·CORS allowlist 강제.
+- **보안 미들웨어** (`aisast/api/middleware/`):
+  - `SecurityHeadersMiddleware` — HSTS, CSP, X-Frame, X-Content-Type,
+    Referrer-Policy, Permissions-Policy
+  - `RequestSizeMiddleware` — 일반 2 MiB / 업로드 500 MiB 이중 상한
+  - `install_rate_limit()` — slowapi 가용 시 IP 기반 분당 제한
+  - `install(app, settings)` 공통 진입점으로 프로파일에 맞춰 일괄 적용
+- **비밀번호 정책 + 계정 잠금** (`aisast/api/security.py`):
+  - `validate_password_policy()` — 최소 12자, 3종 이상 문자, 흔한 비밀번호
+    블랙리스트, 연속 동일 문자 4회 금지
+  - `register_failed_login()`, `clear_login_failures()`, `is_user_locked()`
+  - `users` 테이블에 `failed_attempts`, `locked_until`, `last_login_at` 컬럼
+  - 로그인 라우트가 잠김 상태에서 **423 Locked** 반환, 실패마다 감사 로그
+- **리소스 오버레이**:
+  - `aisast/mois/loader.py::load_mois_catalog()` + `load_reference_overlay()`
+  - `AISAST_MOIS_CATALOG_PATH` — YAML 로 49개 카탈로그 병합/교체
+  - `AISAST_REFERENCE_STANDARDS_PATH` — CWE→추가 표준 매핑 (KISA-KSG 등)
+  - `aisast/resources/` 에 `mois_catalog.sample.yaml` + `reference_standards.sample.yaml`
+    샘플 동봉
+- **커스텀 룰 오버레이**: `AISAST_CUSTOM_RULES_DIR` — OpengrepEngine 이
+  내장 `rules/opengrep` 과 함께 사용자 디렉터리를 `--config` 로 동시 전달.
+  업그레이드가 내장 룰만 덮어쓴다.
+- **Alembic 마이그레이션**: `alembic.ini`, `alembic/env.py`, `alembic/script.py.mako`,
+  `alembic/versions/20260415_0001_initial.py` 스캐폴드. `auto_migrate` 는 dev
+  전용 fallback. CLI `aisast db-upgrade` 추가.
+- **3-tier 프로덕션 배포**:
+  - `deploy/nginx/nginx.conf` — TLS 종료 + 정적 서빙 + `/api` 프록시 + 보안
+    헤더 이중 방어 + SPA fallback
+  - `frontend/Dockerfile.prod` — 멀티스테이지 (builder + dist 스테이지)
+  - `docker-compose.prod.yml` override — nginx 서비스 + cloud 프로파일 환경
+    변수 + docs 비활성 + rate 60/min
+- **FastAPI 앱 갱신** (`aisast/api/app.py`): `install_middleware()` 호출, 프로파일
+  검증 경고, `discover_all()` 로 entry_points 플러그인 발견, `/ready`
+  readiness probe 추가, 프로파일에 따라 `/docs` 비활성.
+- **테스트 34건 추가** (총 162):
+  - `test_plugin_registry.py` (6) · `test_password_policy.py` (9)
+  - `test_security_middleware.py` (4) · `test_settings_profile.py` (7)
+  - `test_catalog_overlay.py` (3) · `test_hooks.py` (3)
+  - `test_account_lockout_e2e.py` (1) · 기존 테스트 2건 경로 조정
+- **신규 문서 `docs/ARCHITECTURE.md`**: 3-tier 계층 다이어그램, 플러그인 그룹
+  표, 서비스 계층 예시, 배포 프로파일 매트릭스, 보안 모델, 커스터마이징 격리
+  원칙, 발전 로드맵.
+- **`docs/USER_GUIDE.md` §20 신설**: 확장/커스터마이징 가이드 9개 섹션
+  (플러그인, YAML 오버레이, 커스텀 룰, 훅, 프로파일, 서비스 재사용, Alembic,
+  프로덕션 배포, 업그레이드 체크리스트).
 
 ### 2026-04-15 (심야 — 종합 테스트 스위트 v0.3.1)
 구현된 모든 기능을 자동 검증하는 백엔드·프론트엔드 종합 테스트 스위트 추가.
@@ -1333,4 +1398,242 @@ curl "http://localhost:8000/api/admin/audit?action=finding.status_change&limit=5
 ```
 
 CWE → OWASP/SANS/PCI 매핑은 `aisast/mois/references.py` 단일 소스에서 관리되며
-새 표준을 추가할 때 이 파일만 수정하면 모든 응답에 자동 반영된다.
+새 표준을 추가할 때 이 파일만 수정하면 모든 응답에 자동 반영된다. 또한 사용자
+YAML 오버레이(§20.2) 로 **코드 수정 없이** KISA-KSG, ISO 27001 등을 추가할 수
+있다.
+
+---
+
+## 20. 확장 / 커스터마이징 가이드
+
+aiSAST 는 **5가지 확장 지점**을 제공한다. 커스터마이징은 코어 패키지 수정 없이
+이루어지며, 패키지 업그레이드 시에도 유지된다. 전체 아키텍처 원칙은
+[docs/ARCHITECTURE.md](ARCHITECTURE.md) 참조.
+
+### 20.1 플러그인 패키지 (엔진 / LLM / 리포트 / 레퍼런스)
+
+Python entry_points 로 플러그인을 등록하면 `pip install` 만으로 aiSAST 가 자동
+발견한다.
+
+```toml
+# my-plugin/pyproject.toml
+[project]
+name = "aisast-plugin-mycheck"
+dependencies = ["aisast>=0.4.0"]
+
+[project.entry-points."aisast.engines"]
+mycheck = "aisast_plugin_mycheck:MyCheckEngine"
+
+[project.entry-points."aisast.llm"]
+vllm = "aisast_plugin_mycheck:VLLMClient"
+
+[project.entry-points."aisast.hooks"]
+jira-sync = "aisast_plugin_mycheck:JiraHook"
+```
+
+카테고리 목록:
+
+| entry_point 그룹 | 인터페이스 | 설명 |
+|-----------------|-----------|------|
+| `aisast.engines` | `Engine` | SAST 분석 엔진 어댑터 |
+| `aisast.llm` | `LLMClient` | 오탐 필터링용 LLM 프로바이더 |
+| `aisast.reports` | 함수 또는 클래스 | 신규 리포트 포맷 |
+| `aisast.references` | dict 반환 함수 | CWE→표준 매핑 공급자 |
+| `aisast.hooks` | `ScanHook` | 수명주기 훅 |
+
+런타임 등록도 가능:
+
+```python
+from aisast.plugins import engine_registry
+engine_registry.register("mysast", MySAST, source="runtime")
+```
+
+비활성화:
+
+```bash
+AISAST_PLUGINS_DISABLED=jira-sync,mycheck docker compose up
+```
+
+### 20.2 YAML 리소스 오버레이
+
+**커스텀 MOIS 항목 추가** — 행안부 개정판, 사내 전용 룰 코드:
+
+```yaml
+# /etc/aisast/mois_override.yaml
+items:
+  - id: "SR1-1"
+    name_kr: "SQL 삽입 (개정판)"
+    name_en: "SQL Injection"
+    category: "입력데이터 검증 및 표현"
+    cwe_ids: ["CWE-89", "CWE-564"]
+    severity: "HIGH"
+    primary_engines: ["opengrep"]
+  - id: "ORG-SR-101"
+    name_kr: "사내 API 키 하드코드"
+    category: "보안기능"
+    cwe_ids: ["CWE-798"]
+    severity: "HIGH"
+    primary_engines: ["opengrep"]
+```
+
+```bash
+AISAST_MOIS_CATALOG_PATH=/etc/aisast/mois_override.yaml
+```
+
+기존 49개 위에 **병합** 되므로 내장 항목을 보존하면서 추가/교체할 수 있다.
+샘플: `aisast/resources/mois_catalog.sample.yaml`.
+
+**커스텀 레퍼런스 표준 추가** — KISA-KSG, ISO 27001, 사내 표준:
+
+```yaml
+# /etc/aisast/refs_override.yaml
+mappings:
+  "CWE-89":
+    - standard: "KISA-KSG-2024"
+      id: "DB-001"
+      title: "데이터베이스 입력 검증 필수"
+  "CWE-79":
+    - standard: "ISO-27001"
+      id: "A.14.2.5"
+      title: "Secure system engineering principles"
+```
+
+```bash
+AISAST_REFERENCE_STANDARDS_PATH=/etc/aisast/refs_override.yaml
+```
+
+샘플: `aisast/resources/reference_standards.sample.yaml`.
+
+### 20.3 커스텀 룰 디렉터리
+
+Opengrep 룰은 내장 `rules/opengrep/` 과 **같은 레벨로** 사용자 디렉터리를
+추가할 수 있다:
+
+```bash
+mkdir -p /etc/aisast/my-rules/python
+cp my-custom-rule.yml /etc/aisast/my-rules/python/
+
+AISAST_CUSTOM_RULES_DIR=/etc/aisast/my-rules \
+  docker compose up -d
+```
+
+업그레이드 시 내장 룰만 덮어쓰고 `/etc/aisast/my-rules` 는 건드리지 않는다.
+
+### 20.4 확장 훅
+
+Python 코드로 수명주기 이벤트를 구독:
+
+```python
+# my_aisast_plugin/hooks.py
+from aisast.hooks import hook_registry
+from aisast.db import models
+
+class JiraIssueSync:
+    def on_status_change(self, finding: models.Finding, old: str, new: str):
+        if new == "confirmed":
+            create_jira_ticket(finding)
+
+    def post_scan(self, scan_id: str, result):
+        if any(f.severity == "HIGH" for f in result.findings):
+            send_slack_alert(scan_id, result.findings)
+
+hook_registry.register("jira-sync", JiraIssueSync())
+```
+
+지원 이벤트:
+
+| 이벤트 | 시점 | 인자 |
+|--------|------|------|
+| `pre_scan` | 스캔 시작 직전 | `(scan_id, target)` |
+| `post_scan` | 스캔 완료 후 (Triage 포함) | `(scan_id, result)` |
+| `pre_persist` | DB 저장 직전 | `(scan_id, result)` |
+| `post_persist` | DB 저장 후 | `(scan_id, scan_row)` |
+| `on_status_change` | Finding 상태 전이 시 | `(finding, old, new)` |
+
+모든 훅 호출은 격리되어 있어 한 훅의 예외가 다른 훅이나 코어 파이프라인을
+멈추게 하지 않는다.
+
+### 20.5 설정 프로파일
+
+배포 환경마다 동일 코드베이스로 기본값을 바꿀 수 있다:
+
+| 프로파일 | 대상 | 주요 차이 |
+|----------|------|-----------|
+| `local` | 개발자 워크스테이션 | CORS=`*`, docs 활성, rate limit off, 약한 secret 허용 |
+| `docker` | 팀/온프렘 Compose | CORS=localhost, rate 100/min, INFO 로그 |
+| `cloud` | 프로덕션 클라우드 | **docs 비활성**, **HSTS 강제**, secret 강도 검증, rate 60/min, JSON 로그, CORS allowlist 강제 |
+
+```bash
+AISAST_PROFILE=cloud \
+  AISAST_SECRET_KEY=$(openssl rand -hex 32) \
+  AISAST_CORS_ORIGINS=https://sast.corp.com \
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+모든 개별 값은 여전히 `AISAST_*` 환경변수로 재정의된다. 프로파일은 **기본값**
+만 바꾼다.
+
+### 20.6 서비스 계층 재사용
+
+라우트와 독립된 비즈니스 로직은 `aisast.services` 에 있으므로 Celery 태스크·
+CLI·외부 스크립트에서 동일한 API 로 재사용할 수 있다:
+
+```python
+from aisast.db.session import session_scope
+from aisast.services import ActorContext, ProjectService, ScanService
+
+with session_scope() as session:
+    actor = ActorContext(user=None, ip="127.0.0.1")
+    project = ProjectService(session, actor).create(name="nightly-scan")
+    scan = ScanService(session, actor).queue_from_path(
+        project_id=project.id,
+        source_path="/build/workspace",
+        language_hint="java",
+        enable_second_pass=True,
+        enable_triage=True,
+    )
+```
+
+### 20.7 Alembic 마이그레이션
+
+스키마 변경은 Alembic 정식 마이그레이션으로 관리:
+
+```bash
+# 새 모델 추가 후
+alembic revision --autogenerate -m "add some_table"
+
+# 적용
+alembic upgrade head
+
+# 또는 CLI
+aisast db-upgrade
+```
+
+`auto_migrate` 는 개발용 fallback 으로만 동작하며, 프로덕션에서는 반드시
+Alembic 을 사용한다.
+
+### 20.8 프로덕션 배포 (3-tier)
+
+```
+ 브라우저                  nginx                 FastAPI            Postgres
+ ────────   HTTPS   ───▶  (tls종료)  ───▶       (api/worker)  ───▶ (managed)
+                           · 정적 서빙            · 서비스계층
+                           · /api 프록시         · 플러그인 로드
+                           · 보안 헤더           · 감사 로그
+```
+
+`docker-compose.prod.yml` override 로 nginx + 정적 빌드 프론트엔드 + cloud
+프로파일 API 가 한 번에 올라온다. 자세한 실행 방법은 `ARCHITECTURE.md §6.3`
+참조.
+
+### 20.9 업그레이드 체크리스트
+
+패키지 버전을 올릴 때 다음 6가지가 보존되는지만 확인하면 된다 — 모두 환경변수/
+볼륨 기반이므로 코드 수정 불필요.
+
+1. `AISAST_MOIS_CATALOG_PATH` — 카탈로그 오버레이 YAML 경로
+2. `AISAST_REFERENCE_STANDARDS_PATH` — 레퍼런스 오버레이 YAML 경로
+3. `AISAST_CUSTOM_RULES_DIR` — 커스텀 Opengrep 룰 디렉터리
+4. 설치된 플러그인 패키지 (`pip list | grep aisast-plugin-`)
+5. `docker-compose.override.yml` — 환경변수·볼륨 커스텀
+6. DB 데이터 — Alembic 이 호환 마이그레이션 제공

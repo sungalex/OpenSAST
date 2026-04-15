@@ -327,7 +327,11 @@ CWE_TO_PCI_DSS: dict[str, str] = {
 
 
 def references_for_cwe(cwe_id: str) -> list[ReferenceTag]:
-    """단일 CWE 에 대응되는 모든 표준 레퍼런스 반환."""
+    """단일 CWE 에 대응되는 모든 표준 레퍼런스 반환.
+
+    내장 매핑 + 사용자 YAML 오버레이(`AISAST_REFERENCE_STANDARDS_PATH`)를 병합해
+    돌려준다. 오버레이는 읽기 전용 캐시로 1회만 로드된다.
+    """
 
     cwe = _normalize(cwe_id)
     if not cwe:
@@ -363,7 +367,39 @@ def references_for_cwe(cwe_id: str) -> list[ReferenceTag]:
                 url="https://www.pcisecuritystandards.org/",
             )
         )
+    # 사용자 오버레이 (KISA-KSG, ISO-27001 등)
+    for extra in _overlay_cache().get(cwe, []):
+        tags.append(
+            ReferenceTag(
+                standard=extra.get("standard", "custom"),
+                id=extra.get("id", ""),
+                title=extra.get("title", ""),
+                url=extra.get("url", ""),
+            )
+        )
     return tags
+
+
+_OVERLAY_CACHE: dict[str, list[dict[str, str]]] | None = None
+
+
+def _overlay_cache() -> dict[str, list[dict[str, str]]]:
+    global _OVERLAY_CACHE
+    if _OVERLAY_CACHE is None:
+        try:
+            from aisast.mois.loader import load_reference_overlay
+
+            _OVERLAY_CACHE = load_reference_overlay()
+        except Exception:  # noqa: BLE001
+            _OVERLAY_CACHE = {}
+    return _OVERLAY_CACHE
+
+
+def reset_overlay_cache() -> None:
+    """테스트 환경에서 오버레이 재로드를 위한 캐시 초기화."""
+
+    global _OVERLAY_CACHE
+    _OVERLAY_CACHE = None
 
 
 def references_for_cwes(cwes: Iterable[str]) -> list[ReferenceTag]:

@@ -130,16 +130,31 @@ class Triager:
 
 
 def build_client(settings: Settings | None = None) -> LLMClient:
+    """플러그인 레지스트리에서 LLM 클라이언트를 생성한다.
+
+    내장 프로바이더: `ollama`, `anthropic`, `noop`.
+    외부 플러그인이 entry_points 로 등록한 프로바이더도 동일하게 조회된다.
+    프로바이더 초기화가 실패하면 (`LLMError`) `noop` 으로 자동 폴백한다.
+    """
+
+    from aisast.plugins.registry import engine_registry  # noqa: F401
+    from aisast.plugins.registry import llm_registry
+
     settings = settings or get_settings()
     provider = settings.llm_provider.lower()
     try:
-        if provider == "anthropic":
-            return AnthropicClient(settings)
-        if provider == "ollama":
-            return OllamaClient(settings)
+        plugin = llm_registry.get(provider)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("LLM provider %r not found in registry: %s", provider, exc)
+        plugin = llm_registry.get("noop")
+    try:
+        return plugin.factory(settings)
+    except TypeError:
+        # factory 가 인수를 받지 않는 경우 (예: NoopLLMClient)
+        return plugin.factory()
     except LLMError as exc:
         log.warning("LLM provider %s unavailable: %s", provider, exc)
-    return NoopLLMClient()
+        return llm_registry.get("noop").factory()
 
 
 _JSON_BLOCK_RE = re.compile(r"\{[\s\S]*\}")

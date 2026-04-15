@@ -19,6 +19,7 @@ from pathlib import Path
 from aisast.config import Settings, get_settings
 from aisast.engines import EngineUnavailable, build_engine
 from aisast.engines.registry import FIRST_PASS_ENGINES, SECOND_PASS_ENGINES
+from aisast.hooks import emit as emit_hook
 from aisast.llm.triage import Triager
 from aisast.models import Finding, ScanResult, ScanTarget
 from aisast.sarif.merge import coverage_by_engine, coverage_by_mois, merge_findings
@@ -52,6 +53,11 @@ class ScanPipeline:
         started_at = datetime.now(timezone.utc)
         t0 = time.time()
 
+        # 확장 훅: 스캔 시작 — 커스텀 감사/알림 발행 가능
+        errors = emit_hook("pre_scan", scan_id, target)
+        for err in errors:
+            log.warning("pre_scan hook error: %s", err)
+
         first_pass_findings = self._run_pass(
             target, options.engines or FIRST_PASS_ENGINES, "1st"
         )
@@ -72,7 +78,7 @@ class ScanPipeline:
                 log.warning("triage pipeline failed: %s", exc)
 
         finished_at = datetime.now(timezone.utc)
-        return ScanResult(
+        result = ScanResult(
             scan_id=scan_id,
             target_root=str(root),
             started_at=started_at,
@@ -81,6 +87,12 @@ class ScanPipeline:
             engine_stats=coverage_by_engine(merged),
             mois_coverage=coverage_by_mois(merged),
         )
+
+        # 확장 훅: 스캔 완료
+        for err in emit_hook("post_scan", scan_id, result):
+            log.warning("post_scan hook error: %s", err)
+
+        return result
 
     def _run_pass(
         self,

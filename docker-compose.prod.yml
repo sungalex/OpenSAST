@@ -1,0 +1,60 @@
+# 프로덕션 오버라이드.
+#
+# 실행:
+#   AISAST_PROFILE=cloud \
+#     AISAST_SECRET_KEY=$(openssl rand -hex 32) \
+#     AISAST_CORS_ORIGINS=https://sast.example.com \
+#     docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# 이 override 는:
+# - frontend 컨테이너를 프로덕션 정적 빌드로 교체
+# - nginx 리버스 프록시 추가 (80/443 노출)
+# - API docs 기본 비활성화 (enable_docs=false in cloud profile)
+# - rate limit 및 보안 헤더 강화
+
+version: "3.9"
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      target: dist
+    command: ["sh", "-c", "sleep infinity"]
+    ports: []  # nginx 가 노출하므로 직접 노출 제거
+    environment:
+      NODE_ENV: production
+
+  api:
+    environment:
+      AISAST_PROFILE: cloud
+      AISAST_ENABLE_DOCS: "false"
+      AISAST_ENFORCE_HTTPS: "true"
+      AISAST_SECURITY_HEADERS_ENABLED: "true"
+      AISAST_RATE_LIMIT_PER_MINUTE: "60"
+    ports: []  # nginx 가 단독 진입점
+
+  worker:
+    environment:
+      AISAST_PROFILE: cloud
+
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      - api
+      - frontend
+    ports:
+      - "0.0.0.0:80:80"
+      # - "0.0.0.0:443:443"  # TLS 인증서 마운트 후 활성
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - aisast-frontend-dist:/usr/share/nginx/html:ro
+      # - ./deploy/nginx/certs:/etc/nginx/certs:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  aisast-frontend-dist:

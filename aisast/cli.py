@@ -109,6 +109,21 @@ def engines() -> None:
     console.print(table)
 
 
+@app.command("db-upgrade")
+def db_upgrade(
+    revision: str = typer.Argument("head", help="Alembic 리비전 (기본: head)"),
+) -> None:
+    """Alembic 마이그레이션 적용."""
+
+    from alembic import command
+    from alembic.config import Config as AlembicConfig
+
+    cfg = AlembicConfig(str(get_settings().project_root / "alembic.ini"))
+    cfg.set_main_option("sqlalchemy.url", get_settings().database_url)
+    command.upgrade(cfg, revision)
+    console.print(f"[green]Alembic upgrade[/] → {revision}")
+
+
 @app.command("init-db")
 def init_db(
     seed_admin: bool = typer.Option(

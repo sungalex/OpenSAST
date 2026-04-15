@@ -2,7 +2,10 @@
 
 import pytest
 
-from aisast.api.routes.findings import _ADMIN_TRANSITIONS, _ALLOWED_SELF_TRANSITIONS
+from aisast.services.finding_service import (
+    _ADMIN_TRANSITIONS,
+    _SELF_TRANSITIONS as _ALLOWED_SELF_TRANSITIONS,
+)
 
 
 def test_self_transitions_reject_direct_exclusion() -> None:

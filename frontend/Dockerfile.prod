@@ -1,0 +1,17 @@
+# 프로덕션 전용 멀티스테이지 빌드.
+# - builder 스테이지: npm ci + vite build → /app/dist
+# - 최종 이미지: nginx 가 정적 파일을 서빙 (실제 서빙은 deploy/nginx/nginx.conf 참조)
+
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+COPY package.json ./
+RUN npm install --no-fund --no-audit
+COPY . .
+RUN npm run build
+
+FROM alpine:3.20 AS dist
+# 이 스테이지는 nginx 서비스에서 `COPY --from=frontend` 로 가져가는 용도.
+# 단독 실행 이미지가 아님.
+COPY --from=builder /app/dist /dist
+CMD ["sh", "-c", "echo 'use nginx service to serve /dist'; sleep infinity"]

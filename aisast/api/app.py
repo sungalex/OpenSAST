@@ -1,10 +1,15 @@
-"""FastAPI 애플리케이션 팩토리."""
+"""FastAPI 애플리케이션 팩토리.
+
+프로파일(`local`/`docker`/`cloud`)에 따라 CORS, 보안 헤더, rate limit, 문서 노출
+등의 동작이 자동 조정된다. 플러그인 레지스트리도 startup 시 entry_points 를
+발견하여 내장 + 외부 플러그인 모두 활성화된다.
+"""
 
 from __future__ import annotations
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
+from aisast.api.middleware import install as install_middleware
 from aisast.api.routes import (
     audit,
     auth,
@@ -18,38 +23,64 @@ from aisast.api.routes import (
     scans,
     suppressions,
 )
-from aisast.config import get_settings
+from aisast.config import Settings, get_settings
 from aisast.db import repo
-from aisast.db.base import Base
 from aisast.db.migrate import auto_migrate
 from aisast.db.session import init_engine, session_scope
+from aisast.plugins.registry import discover_all
+from aisast.utils.logging import get_logger
+
+log = get_logger(__name__)
 
 
-def create_app() -> FastAPI:
-    settings = get_settings()
+def create_app(settings: Settings | None = None) -> FastAPI:
+    settings = settings or get_settings()
+
+    # 프로파일 무결성 검사 — 운영 환경에서 약한 시크릿 등 경고
+    for warning in settings.validate_profile():
+        log.warning(warning)
+
+    # 내부 import 가 aisast.engines / aisast.llm 을 건드려 내장 플러그인이
+    # 레지스트리에 등록되도록 한다.
+    import aisast.engines  # noqa: F401
+    import aisast.llm  # noqa: F401
+
     app = FastAPI(
         title=settings.app_name,
-        version="0.1.0",
+        version="0.4.0",
         description="행안부 49개 구현단계 보안약점 진단 API",
+        docs_url="/docs" if settings.enable_docs else None,
+        redoc_url="/redoc" if settings.enable_docs else None,
+        openapi_url="/openapi.json" if settings.enable_docs else None,
     )
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+
+    install_middleware(app, settings)
 
     @app.on_event("startup")
     def _startup() -> None:
         engine = init_engine(settings)
         auto_migrate(engine)
+        discover_all()  # 외부 entry_points 플러그인 탐색
         with session_scope() as session:
             repo.ensure_bootstrap_admin(session, settings=settings)
 
     @app.get("/health", tags=["system"])
     def health() -> dict[str, str]:
-        return {"status": "ok", "app": settings.app_name}
+        return {"status": "ok", "app": settings.app_name, "profile": settings.profile.value}
+
+    @app.get("/ready", tags=["system"])
+    def ready() -> dict[str, str]:
+        """Readiness probe — DB 연결 테스트."""
+
+        from sqlalchemy import text
+
+        try:
+            with session_scope() as session:
+                session.execute(text("SELECT 1"))
+            return {"status": "ready"}
+        except Exception as exc:  # noqa: BLE001
+            log.warning("readiness check failed: %s", exc)
+            return {"status": "degraded", "error": str(exc)}
 
     app.include_router(auth.router)
     app.include_router(projects.router)
