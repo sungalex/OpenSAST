@@ -48,12 +48,17 @@ _ENGINE_PRIORITY = {
 }
 
 
+_SEVERITY_RANK = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}
+
+
 def _prefers(candidate: Finding, existing: Finding) -> bool:
     c_rank = _ENGINE_PRIORITY.get(candidate.engine.lower(), 0)
     e_rank = _ENGINE_PRIORITY.get(existing.engine.lower(), 0)
     if c_rank != e_rank:
         return c_rank > e_rank
-    return candidate.severity.value < existing.severity.value
+    c_sev = _SEVERITY_RANK.get(candidate.severity.value, 0)
+    e_sev = _SEVERITY_RANK.get(existing.severity.value, 0)
+    return c_sev > e_sev
 
 
 def coverage_by_mois(findings: list[Finding]) -> dict[str, int]:

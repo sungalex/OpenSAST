@@ -10,6 +10,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from aisast.config import Settings
+from aisast.api.middleware.csrf import CSRFMiddleware
+from aisast.api.middleware.prometheus import PrometheusMiddleware
 from aisast.api.middleware.rate_limit import install_rate_limit
 from aisast.api.middleware.request_size import RequestSizeMiddleware
 from aisast.api.middleware.security_headers import SecurityHeadersMiddleware
@@ -36,6 +38,10 @@ def install(app: FastAPI, settings: Settings) -> None:
         expose_headers=["X-Request-Id"],
     )
 
+    # CSRF — cloud 프로파일에서만 기본 활성
+    if settings.profile.value == "cloud":
+        app.add_middleware(CSRFMiddleware)
+
     # Security headers
     if settings.security_headers_enabled:
         app.add_middleware(
@@ -51,12 +57,17 @@ def install(app: FastAPI, settings: Settings) -> None:
         upload_path_prefixes=("/api/scans/upload",),
     )
 
+    # Prometheus metrics
+    app.add_middleware(PrometheusMiddleware)
+
     # Rate limit (slowapi) — 가장 바깥
     install_rate_limit(app, settings)
 
 
 __all__ = [
     "install",
+    "CSRFMiddleware",
+    "PrometheusMiddleware",
     "RequestSizeMiddleware",
     "SecurityHeadersMiddleware",
     "install_rate_limit",

@@ -11,6 +11,8 @@ from aisast.api.security import (
     PasswordPolicyError,
     clear_login_failures,
     create_access_token,
+    create_refresh_token,
+    decode_access_token,
     hash_password,
     is_user_locked,
     register_failed_login,
@@ -90,6 +92,7 @@ def login(
 
     clear_login_failures(user)
     token = create_access_token(user.email, user.role)
+    refresh = create_refresh_token(user.email)
     repo.record_audit(
         db,
         user_id=user.id,
@@ -99,7 +102,24 @@ def login(
         ip=ip,
     )
     db.commit()
-    return TokenResponse(access_token=token, role=user.role)
+    return TokenResponse(access_token=token, refresh_token=refresh, role=user.role)
+
+
+@router.post("/refresh", response_model=TokenResponse)
+def refresh_token(request: Request, db: Session = Depends(get_db)) -> TokenResponse:
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="missing refresh token")
+    token = auth_header[7:]
+    payload = decode_access_token(token)
+    if payload is None or payload.get("type") != "refresh":
+        raise HTTPException(status_code=401, detail="invalid refresh token")
+    user = db.query(models.User).filter_by(email=payload["sub"]).first()
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=401, detail="user not found or inactive")
+    new_access = create_access_token(user.email, user.role)
+    new_refresh = create_refresh_token(user.email)
+    return TokenResponse(access_token=new_access, refresh_token=new_refresh, role=user.role)
 
 
 @router.post(

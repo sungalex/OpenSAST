@@ -58,7 +58,8 @@ def create_celery_app() -> Celery:
         timezone="Asia/Seoul",
         enable_utc=True,
         task_track_started=True,
-        task_time_limit=3600,
+        task_time_limit=7200,
+        task_soft_time_limit=3600,
         worker_prefetch_multiplier=1,
         # 플랫폼에 맞는 pool 힌트 — worker 실행 시 명시하지 않으면 사용됨
         worker_pool=recommended_pool(),

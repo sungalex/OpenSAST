@@ -8,7 +8,7 @@ from typing import Iterable
 
 from fastapi import status
 from sqlalchemy import and_, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from aisast.db import models, repo
 from aisast.hooks import hook_registry
@@ -59,7 +59,12 @@ class FindingService(BaseService):
         limit: int = 200,
         offset: int = 0,
     ) -> list[models.Finding]:
-        stmt = select(models.Finding)
+        # cwe_ids와 path_glob 필터가 있으면 DB에서 더 많이 가져와 메모리 필터 후 잘라냄
+        fetch_limit = limit * 3 if (cwe_ids or path_glob) else limit
+
+        stmt = select(models.Finding).options(
+            selectinload(models.Finding.triage)
+        )
         filters = []
         if scan_id:
             filters.append(models.Finding.scan_id == scan_id)
@@ -95,7 +100,7 @@ class FindingService(BaseService):
                 models.Finding.created_at.desc(),
             )
             .offset(offset)
-            .limit(limit)
+            .limit(fetch_limit)
         )
         rows = list(self.session.scalars(stmt))
         if cwe_ids:
@@ -105,7 +110,7 @@ class FindingService(BaseService):
             ]
         if path_glob:
             rows = [r for r in rows if fnmatch.fnmatch(r.file_path, path_glob)]
-        return rows
+        return rows[:limit]
 
     # ---- 상태 전이 ---------------------------------------------------
     def change_status(

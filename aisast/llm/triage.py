@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from dataclasses import dataclass
@@ -45,7 +46,14 @@ class Triager:
     def triage(
         self, findings: list[Finding], *, source_root: Path | None = None
     ) -> list[Finding]:
+        default_fp = self.settings.llm_default_fp_probability
         for finding in findings:
+            # 캐시 확인
+            cache_key = self._cache_key(finding)
+            cached = self._get_cached(cache_key)
+            if cached is not None:
+                finding.triage = cached
+                continue
             try:
                 ctx = self._collect_context(finding, source_root)
                 system = SYSTEM_PROMPT
@@ -62,17 +70,84 @@ class Triager:
                     language=ctx.language,
                     code_context=ctx.code_context,
                 )
-                response = self.client.complete(system, user)
-                finding.triage = self._parse_response(response.text, response.model)
+                response = self._complete_with_retry(system, user)
+                result = self._parse_response(
+                    response.text, response.model, default_fp=default_fp
+                )
+                finding.triage = result
+                self._set_cached(cache_key, result)
             except LLMError as exc:
                 log.warning("triage failed for %s: %s", finding.finding_id, exc)
                 finding.triage = TriageResult(
                     verdict="needs_review",
-                    fp_probability=50,
+                    fp_probability=default_fp,
                     rationale=f"LLM 호출 실패: {exc}",
                     model=self.client.name,
                 )
         return findings
+
+    def _complete_with_retry(self, system: str, user: str):
+        """tenacity 기반 재시도로 LLM 호출."""
+        from tenacity import (
+            retry,
+            retry_if_exception_type,
+            stop_after_attempt,
+            wait_exponential,
+        )
+
+        @retry(
+            stop=stop_after_attempt(3),
+            wait=wait_exponential(multiplier=1, min=2, max=30),
+            retry=retry_if_exception_type(LLMError),
+            reraise=True,
+        )
+        def _call():
+            return self.client.complete(system, user)
+
+        return _call()
+
+    @staticmethod
+    def _cache_key(finding: Finding) -> str:
+        raw = (
+            f"{finding.rule_id}:{finding.location.file_path}"
+            f":{finding.location.start_line}"
+            f":{(finding.location.snippet or '')[:200]}"
+        )
+        return f"triage:{hashlib.sha256(raw.encode()).hexdigest()[:24]}"
+
+    def _get_cached(self, key: str) -> TriageResult | None:
+        """Redis에서 캐시된 triage 결과 조회."""
+        try:
+            import redis
+
+            r = redis.from_url(self.settings.redis_url)
+            data = r.get(key)
+            if data is None:
+                return None
+            import json as _json
+
+            payload = _json.loads(data)
+            return TriageResult(
+                verdict=payload["verdict"],
+                fp_probability=payload["fp_probability"],
+                rationale=payload.get("rationale", ""),
+                recommended_fix=payload.get("recommended_fix"),
+                patched_code=payload.get("patched_code"),
+                model=payload.get("model", "cached"),
+            )
+        except Exception:
+            return None
+
+    def _set_cached(self, key: str, result: TriageResult) -> None:
+        """Triage 결과를 Redis에 24h TTL로 캐시."""
+        try:
+            import redis
+            import json as _json
+
+            r = redis.from_url(self.settings.redis_url)
+            r.setex(key, 86400, _json.dumps(result.as_dict()))
+        except Exception:
+            pass
 
     def _collect_context(
         self, finding: Finding, source_root: Path | None
@@ -103,21 +178,26 @@ class Triager:
         return TriageContext(code_context=snippet, language=language)
 
     @staticmethod
-    def _parse_response(text: str, model: str) -> TriageResult:
+    def _parse_response(
+        text: str, model: str, *, default_fp: int = 50
+    ) -> TriageResult:
         payload = _extract_json_object(text)
         if payload is None:
             return TriageResult(
                 verdict="needs_review",
-                fp_probability=50,
+                fp_probability=default_fp,
                 rationale="LLM 응답 JSON 파싱 실패",
                 model=model,
             )
         verdict = str(payload.get("verdict") or "needs_review")
-        fp_raw = payload.get("fp_probability") or 50
-        try:
-            fp_prob = int(fp_raw)
-        except (TypeError, ValueError):
-            fp_prob = 50
+        fp_raw = payload.get("fp_probability")
+        if fp_raw is None:
+            fp_prob = default_fp
+        else:
+            try:
+                fp_prob = int(fp_raw)
+            except (TypeError, ValueError):
+                fp_prob = default_fp
         fp_prob = max(0, min(fp_prob, 100))
         return TriageResult(
             verdict=verdict,

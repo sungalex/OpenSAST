@@ -22,9 +22,17 @@ from aisast.utils.subprocess import run_capture
 log = get_logger(__name__)
 
 
-@celery_app.task(name="aisast.run_scan", bind=True)
+@celery_app.task(
+    name="aisast.run_scan",
+    bind=True,
+    autoretry_for=(Exception,),
+    max_retries=2,
+    retry_backoff=True,
+    retry_backoff_max=120,
+    acks_late=True,
+)
 def run_scan_task(
-    self,  # noqa: ARG001 - Celery passes self automatically
+    self,
     scan_id: str,
     source_path: str,
     enable_second_pass: bool = True,
@@ -41,6 +49,9 @@ def run_scan_task(
     )
     with session_scope() as session:
         repo.mark_scan_running(session, scan_id)
+
+    self.update_state(state="PROGRESS", meta={"phase": "scanning", "progress": 0})
+
     try:
         result = run_scan(root, options=options)
     except Exception as exc:
@@ -48,6 +59,9 @@ def run_scan_task(
         with session_scope() as session:
             repo.mark_scan_failed(session, scan_id, error=str(exc))
         raise
+
+    self.update_state(state="PROGRESS", meta={"phase": "persisting", "progress": 90})
+
     with session_scope() as session:
         repo.persist_scan_result(session, scan_id, result)
     return {
@@ -57,9 +71,17 @@ def run_scan_task(
     }
 
 
-@celery_app.task(name="aisast.clone_and_scan", bind=True)
+@celery_app.task(
+    name="aisast.clone_and_scan",
+    bind=True,
+    autoretry_for=(Exception,),
+    max_retries=2,
+    retry_backoff=True,
+    retry_backoff_max=120,
+    acks_late=True,
+)
 def clone_and_scan_task(
-    self,  # noqa: ARG001
+    self,
     scan_id: str,
     git_url: str,
     branch: str | None = None,

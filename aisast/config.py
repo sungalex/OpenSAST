@@ -142,6 +142,7 @@ class Settings(BaseSettings):
     ollama_model: str = "gemma2:9b"
     llm_timeout_seconds: int = 60
     llm_context_window_lines: int = 20
+    llm_default_fp_probability: int = 50
 
     # ---- Engine binaries -----------------------------------------------
     opengrep_bin: str = "semgrep"

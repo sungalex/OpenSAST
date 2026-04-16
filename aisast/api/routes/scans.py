@@ -160,3 +160,25 @@ def read_source_file(
         return ScanService(db).read_source(scan_id, path=path, max_bytes=max_bytes)
     except ServiceError as exc:
         raise exc.as_http() from exc
+
+
+@router.get("/{scan_id}/events", tags=["scans"])
+async def scan_events(scan_id: str, db: Session = Depends(get_db)):
+    """Server-Sent Events 로 스캔 진행 상태를 스트리밍한다."""
+    import asyncio
+
+    from starlette.responses import StreamingResponse
+
+    async def event_stream():
+        while True:
+            scan = db.get(models.Scan, scan_id)
+            if scan is None:
+                yield f'data: {{"error": "scan not found"}}\n\n'
+                return
+            status = scan.status
+            yield f'data: {{"scan_id": "{scan_id}", "status": "{status}"}}\n\n'
+            if status in ("completed", "failed"):
+                return
+            await asyncio.sleep(2)
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")

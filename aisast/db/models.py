@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from aisast.db.base import Base, TimestampMixin
@@ -55,6 +55,9 @@ class Project(Base, TimestampMixin):
 
 class Scan(Base, TimestampMixin):
     __tablename__ = "scans"
+    __table_args__ = (
+        Index("ix_scans_project_status_created", "project_id", "status", "created_at"),
+    )
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True)
     project_id: Mapped[int] = mapped_column(
@@ -80,6 +83,11 @@ class Scan(Base, TimestampMixin):
 
 class Finding(Base, TimestampMixin):
     __tablename__ = "findings"
+    __table_args__ = (
+        Index("ix_findings_scan_severity_status", "scan_id", "severity", "status"),
+        Index("ix_findings_mois_id", "mois_id"),
+        Index("ix_findings_finding_hash", "finding_hash"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     scan_id: Mapped[str] = mapped_column(ForeignKey("scans.id"), nullable=False)
@@ -159,6 +167,9 @@ class SuppressionRule(Base, TimestampMixin):
     """경로·함수·룰 기반 탐지 제외 규칙."""
 
     __tablename__ = "suppression_rules"
+    __table_args__ = (
+        Index("ix_suppression_rules_project_kind", "project_id", "kind"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     project_id: Mapped[int] = mapped_column(
@@ -196,6 +207,9 @@ class AuditLog(Base):
     """사용자 감사 로그."""
 
     __tablename__ = "audit_logs"
+    __table_args__ = (
+        Index("ix_audit_logs_user_created", "user_id", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)

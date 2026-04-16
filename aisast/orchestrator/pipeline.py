@@ -63,10 +63,17 @@ class ScanPipeline:
         )
 
         second_pass_findings: list[list[Finding]] = []
-        if options.enable_second_pass and not options.engines:
-            second_pass_findings = self._run_pass(
-                target, SECOND_PASS_ENGINES, "2nd"
-            )
+        if options.enable_second_pass:
+            if options.engines:
+                second_engines = tuple(
+                    e for e in options.engines if e in SECOND_PASS_ENGINES
+                )
+            else:
+                second_engines = SECOND_PASS_ENGINES
+            if second_engines:
+                second_pass_findings = self._run_pass(
+                    target, second_engines, "2nd"
+                )
 
         merged = merge_findings(first_pass_findings + second_pass_findings)
         log.info("merged %d findings from %d engine runs", len(merged), len(first_pass_findings) + len(second_pass_findings))

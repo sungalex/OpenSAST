@@ -27,9 +27,16 @@ def install_rate_limit(app: FastAPI, settings: Settings) -> None:
         log.info("slowapi not installed — rate limiting disabled")
         return
 
+    # Redis 사용 가능하면 분산 rate limit
+    storage_uri = None
+    if settings.redis_url:
+        storage_uri = settings.redis_url
+        log.info("rate limit: using Redis backend (%s)", settings.redis_url)
+
     limiter = Limiter(
         key_func=get_remote_address,
         default_limits=[f"{settings.rate_limit_per_minute}/minute"],
+        storage_uri=storage_uri,
     )
     app.state.limiter = limiter
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from aisast.api.middleware import install as install_middleware
+from aisast.api.middleware.prometheus import metrics_response
 from aisast.api.routes import (
     audit,
     auth,
@@ -27,6 +28,7 @@ from aisast.config import Settings, get_settings
 from aisast.db import repo
 from aisast.db.migrate import auto_migrate
 from aisast.db.session import init_engine, session_scope
+from aisast.observability import init_telemetry
 from aisast.plugins.registry import discover_all
 from aisast.utils.logging import get_logger
 
@@ -47,7 +49,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title=settings.app_name,
-        version="0.4.0",
+        version="0.5.0",
         description="행안부 49개 구현단계 보안약점 진단 API",
         docs_url="/docs" if settings.enable_docs else None,
         redoc_url="/redoc" if settings.enable_docs else None,
@@ -58,6 +60,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.on_event("startup")
     def _startup() -> None:
+        init_telemetry()
         engine = init_engine(settings)
         auto_migrate(engine)
         discover_all()  # 외부 entry_points 플러그인 탐색
@@ -69,18 +72,49 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {"status": "ok", "app": settings.app_name, "profile": settings.profile.value}
 
     @app.get("/ready", tags=["system"])
-    def ready() -> dict[str, str]:
-        """Readiness probe — DB 연결 테스트."""
+    def ready() -> dict:
+        """Readiness probe — DB + Redis + Celery broker 연결 테스트."""
 
         from sqlalchemy import text
 
+        checks: dict[str, str] = {}
+
+        # DB check
         try:
             with session_scope() as session:
                 session.execute(text("SELECT 1"))
-            return {"status": "ready"}
+            checks["db"] = "ok"
         except Exception as exc:  # noqa: BLE001
-            log.warning("readiness check failed: %s", exc)
-            return {"status": "degraded", "error": str(exc)}
+            checks["db"] = str(exc)
+
+        # Redis check
+        try:
+            import redis
+            r = redis.from_url(settings.redis_url)
+            r.ping()
+            checks["redis"] = "ok"
+        except Exception as exc:  # noqa: BLE001
+            checks["redis"] = str(exc)
+
+        # Celery broker check
+        try:
+            from aisast.worker import celery_app
+            conn = celery_app.connection()
+            conn.ensure_connection(max_retries=1, timeout=2)
+            conn.close()
+            checks["celery"] = "ok"
+        except Exception as exc:  # noqa: BLE001
+            checks["celery"] = str(exc)
+
+        all_ok = all(v == "ok" for v in checks.values())
+        if not all_ok:
+            log.warning("readiness check degraded: %s", checks)
+        return {"status": "ready" if all_ok else "degraded", "checks": checks}
+
+    @app.get("/metrics", tags=["system"])
+    def metrics():
+        """Prometheus scrape 엔드포인트."""
+        return metrics_response()
 
     app.include_router(auth.router)
     app.include_router(projects.router)

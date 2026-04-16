@@ -7,6 +7,7 @@ passlib 는 bcrypt>=4.1 과 호환 문제가 있어 사용하지 않는다. `bcr
 from __future__ import annotations
 
 import unicodedata
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -35,10 +36,30 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(subject: str, role: str) -> str:
     settings = get_settings()
-    expires = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.access_token_expire_minutes
-    )
-    payload = {"sub": subject, "role": role, "exp": expires}
+    now = datetime.now(timezone.utc)
+    expires = now + timedelta(minutes=settings.access_token_expire_minutes)
+    payload = {
+        "sub": subject,
+        "role": role,
+        "exp": expires,
+        "iat": now,
+        "jti": uuid.uuid4().hex,
+        "type": "access",
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=_ALGORITHM)
+
+
+def create_refresh_token(subject: str) -> str:
+    settings = get_settings()
+    now = datetime.now(timezone.utc)
+    expires = now + timedelta(days=7)
+    payload = {
+        "sub": subject,
+        "exp": expires,
+        "iat": now,
+        "jti": uuid.uuid4().hex,
+        "type": "refresh",
+    }
     return jwt.encode(payload, settings.secret_key, algorithm=_ALGORITHM)
 
 

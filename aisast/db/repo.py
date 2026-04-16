@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from aisast.config import Settings, get_settings
 from aisast.db import models
@@ -198,6 +198,7 @@ def list_scans_for_project(
     return list(
         session.scalars(
             select(models.Scan)
+            .options(selectinload(models.Scan.findings))
             .where(models.Scan.project_id == project_id)
             .order_by(models.Scan.created_at.desc())
             .limit(limit)
@@ -234,6 +235,7 @@ def list_findings_for_scan(
     return list(
         session.scalars(
             select(models.Finding)
+            .options(selectinload(models.Finding.triage))
             .where(models.Finding.scan_id == scan_id)
             .order_by(
                 models.Finding.severity.asc(),
