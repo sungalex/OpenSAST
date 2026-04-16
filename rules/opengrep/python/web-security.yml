@@ -1,0 +1,127 @@
+rules:
+  - id: mois-sr1-5-python-file-upload-no-ext-check
+    metadata:
+      mois_id: "SR1-5"
+      cwe: "CWE-434"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "Flask/Django 파일 업로드 시 확장자 검증 없이 저장"
+      remediation: "werkzeug.utils.secure_filename 적용 후 허용 확장자 화이트리스트로 검증하세요."
+    languages: [python]
+    severity: ERROR
+    message: |
+      업로드 파일을 확장자 검증 없이 저장합니다. SR1-5 위험한 형식 파일 업로드 (CWE-434).
+      secure_filename과 허용 확장자 화이트리스트를 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: request.files[$KEY].save(...)
+          - pattern: $FILE = request.files[$KEY]
+
+  - id: mois-sr1-5-python-django-file-upload
+    metadata:
+      mois_id: "SR1-5"
+      cwe: "CWE-434"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "Django 파일 업로드 시 content_type만 신뢰하고 확장자 미검증"
+      remediation: "파일 확장자를 화이트리스트로 검증하고 magic bytes 확인을 추가하세요."
+    languages: [python]
+    severity: ERROR
+    message: |
+      Django에서 업로드 파일의 content_type만 신뢰합니다. SR1-5 위험한 형식 파일 업로드 (CWE-434).
+      확장자 화이트리스트와 magic bytes 검증을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: request.FILES[$KEY].content_type
+          - pattern: $F.content_type == $TYPE
+
+  - id: mois-sr1-6-python-open-redirect
+    metadata:
+      mois_id: "SR1-6"
+      cwe: "CWE-601"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "사용자 입력을 검증 없이 redirect에 전달하여 외부 URL로 리다이렉트"
+      remediation: "리다이렉트 대상을 화이트리스트로 제한하거나 url_has_allowed_host_and_scheme으로 검증하세요."
+    languages: [python]
+    severity: ERROR
+    message: |
+      사용자 입력값을 검증 없이 redirect에 전달합니다. SR1-6 오픈 리다이렉트 (CWE-601).
+      화이트리스트 기반 URL 검증을 적용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: redirect(request.args.get(...))
+          - pattern: redirect(request.args[...])
+          - pattern: redirect(request.form.get(...))
+          - pattern: redirect(request.GET.get(...))
+          - pattern: redirect(request.GET[...])
+          - pattern: HttpResponseRedirect(request.GET.get(...))
+          - pattern: HttpResponseRedirect(request.GET[...])
+          - pattern: HttpResponseRedirect(request.POST.get(...))
+
+  - id: mois-sr1-7-python-xxe
+    metadata:
+      mois_id: "SR1-7"
+      cwe: "CWE-611"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "xml.etree.ElementTree 또는 lxml에서 외부 엔티티 파싱 허용"
+      remediation: "defusedxml 라이브러리를 사용하거나 lxml의 경우 resolve_entities=False로 설정하세요."
+    languages: [python]
+    severity: ERROR
+    message: |
+      안전하지 않은 XML 파서를 사용합니다. SR1-7 XML 외부 엔티티 삽입 (CWE-611).
+      defusedxml을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: xml.etree.ElementTree.parse(...)
+          - pattern: ET.parse(...)
+          - pattern: ET.fromstring(...)
+          - pattern: etree.parse(...)
+          - pattern: etree.fromstring(...)
+          - pattern: lxml.etree.parse(...)
+          - pattern: lxml.etree.fromstring(...)
+          - pattern: xml.dom.minidom.parse(...)
+          - pattern: xml.dom.minidom.parseString(...)
+          - pattern: xml.sax.parse(...)
+
+  - id: mois-sr1-10-python-csrf-missing
+    metadata:
+      mois_id: "SR1-10"
+      cwe: "CWE-352"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "Flask에서 CSRFProtect 미적용 또는 Django CSRF 설정 미흡"
+      remediation: "Flask-WTF의 CSRFProtect를 적용하거나 Django의 CSRF 미들웨어를 활성화하세요."
+    languages: [python]
+    severity: ERROR
+    message: |
+      CSRF 보호가 비활성화되어 있습니다. SR1-10 크로스사이트 요청 위조 (CWE-352).
+      Flask-WTF CSRFProtect 또는 Django CsrfViewMiddleware를 적용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: "@csrf_exempt"
+          - pattern: WTF_CSRF_ENABLED = False
+          - pattern: CSRF_COOKIE_SECURE = False
+
+  - id: mois-sr1-12-python-http-response-splitting
+    metadata:
+      mois_id: "SR1-12"
+      cwe: "CWE-113"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "응답 헤더에 사용자 입력을 직접 삽입"
+      remediation: "헤더 값에 CRLF 문자를 제거하고, 사용자 입력을 헤더에 직접 삽입하지 마세요."
+    languages: [python]
+    severity: ERROR
+    message: |
+      응답 헤더에 사용자 입력을 직접 삽입합니다. SR1-12 HTTP 응답 분할 (CWE-113).
+      CRLF 문자를 필터링하고 입력을 검증하세요.
+    patterns:
+      - pattern-either:
+          - pattern: $RESP.headers[$KEY] = request.args.get(...)
+          - pattern: $RESP.headers[$KEY] = request.args[...]
+          - pattern: $RESP.headers[$KEY] = request.form.get(...)
+          - pattern: $RESP[$KEY] = request.GET.get(...)
+          - pattern: $RESP[$KEY] = request.GET[...]
+          - pattern: $RESP[$KEY] = request.POST.get(...)

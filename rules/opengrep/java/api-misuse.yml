@@ -1,0 +1,117 @@
+rules:
+  - id: mois-sr7-1-java-dns-lookup-auth
+    metadata:
+      mois_id: "SR7-1"
+      cwe: "CWE-350"
+      category: "API 오용"
+      severity: "HIGH"
+      description: "DNS Lookup 결과(호스트명)에 의존한 보안 결정은 DNS 스푸핑으로 우회 가능"
+      remediation: "IP 주소 기반 검증을 사용하거나, 별도 인증 메커니즘(TLS 인증서, API 키 등) 적용"
+      references:
+        - https://cwe.mitre.org/data/definitions/350.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      DNS Lookup에 의존하여 보안 결정을 내리고 있습니다. SR7-1(CWE-350)
+      DNS Lookup에 의존한 보안결정 보안약점입니다.
+      IP 주소 기반 검증이나 별도 인증 메커니즘을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $HOST = $ADDR.getHostName();
+              ...
+              if ($HOST.equals(...)) { ... }
+          - pattern: |
+              $HOST = $ADDR.getCanonicalHostName();
+              ...
+              if ($HOST.equals(...)) { ... }
+          - pattern: |
+              if (InetAddress.getByName($HOST).getHostName().equals(...)) { ... }
+
+  - id: mois-sr7-1-java-hostname-access-control
+    metadata:
+      mois_id: "SR7-1"
+      cwe: "CWE-350"
+      category: "API 오용"
+      severity: "HIGH"
+      description: "요청의 호스트명을 기반으로 접근 제어를 수행하면 DNS 위조에 취약"
+      remediation: "호스트명 대신 IP 주소 허용 목록 또는 인증 토큰 기반 접근 제어 사용"
+      references:
+        - https://cwe.mitre.org/data/definitions/350.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      호스트명 기반 접근 제어를 수행하고 있습니다. SR7-1(CWE-350)
+      DNS Lookup에 의존한 보안결정 보안약점입니다.
+      IP 주소 허용 목록 또는 인증 토큰 기반 접근 제어를 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $HOST = $REQ.getRemoteHost();
+              ...
+              if ($HOST.equals(...)) { ... }
+          - pattern: |
+              if ($REQ.getRemoteHost().equals(...)) { ... }
+
+  - id: mois-sr7-2-java-runtime-exec-string
+    metadata:
+      mois_id: "SR7-2"
+      cwe: "CWE-676"
+      category: "API 오용"
+      severity: "HIGH"
+      description: "Runtime.exec(String)에 단일 문자열을 전달하면 셸 해석으로 명령어 주입 위험"
+      remediation: "ProcessBuilder를 사용하고 인자를 개별 문자열 배열로 전달"
+      references:
+        - https://cwe.mitre.org/data/definitions/676.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      Runtime.exec()에 단일 문자열을 전달하고 있습니다. SR7-2(CWE-676)
+      취약한 API 사용 보안약점입니다.
+      ProcessBuilder를 사용하고 인자를 개별 문자열 배열로 전달하세요.
+    patterns:
+      - pattern-either:
+          - pattern: Runtime.getRuntime().exec($CMD)
+          - pattern: |
+              Runtime $RT = Runtime.getRuntime();
+              ...
+              $RT.exec($CMD);
+
+  - id: mois-sr7-2-java-thread-stop
+    metadata:
+      mois_id: "SR7-2"
+      cwe: "CWE-676"
+      category: "API 오용"
+      severity: "HIGH"
+      description: "Thread.stop()은 deprecated되었으며 모니터 잠금 해제로 데이터 손상 가능"
+      remediation: "Thread.interrupt()와 협력적 종료 패턴 사용"
+      references:
+        - https://cwe.mitre.org/data/definitions/676.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      Thread.stop()을 사용하고 있습니다. SR7-2(CWE-676)
+      취약한 API 사용 보안약점입니다.
+      Thread.interrupt()와 협력적 종료 패턴을 사용하세요.
+    pattern: $THREAD.stop()
+
+  - id: mois-sr7-2-java-system-exit
+    metadata:
+      mois_id: "SR7-2"
+      cwe: "CWE-676"
+      category: "API 오용"
+      severity: "MEDIUM"
+      description: "System.exit()는 JVM을 강제 종료하여 리소스 정리 및 로그 기록을 건너뜀"
+      remediation: "적절한 종료 처리 로직(shutdown hook, 정상 종료 플로우)을 구현"
+      references:
+        - https://cwe.mitre.org/data/definitions/676.html
+    languages: [java]
+    severity: WARNING
+    message: |
+      System.exit()를 호출하고 있습니다. SR7-2(CWE-676)
+      취약한 API 사용 보안약점입니다.
+      적절한 종료 처리 로직(shutdown hook 등)을 구현하세요.
+    patterns:
+      - pattern-either:
+          - pattern: System.exit(...)
+          - pattern: Runtime.getRuntime().halt(...)

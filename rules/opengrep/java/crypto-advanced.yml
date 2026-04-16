@@ -1,0 +1,165 @@
+rules:
+  - id: mois-sr2-5-java-plaintext-password-string
+    metadata:
+      mois_id: "SR2-5"
+      cwe: "CWE-312"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "비밀번호를 String 변수에 평문으로 저장하면 메모리에 남아 유출 위험"
+      remediation: "char[] 배열에 저장 후 사용 직후 Arrays.fill()로 즉시 지우기. 저장 시 BCrypt/Argon2로 해싱"
+      references:
+        - https://cwe.mitre.org/data/definitions/312.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      비밀번호를 String 변수에 평문으로 저장하고 있습니다. SR2-5(CWE-312)
+      암호화되지 않은 중요정보 보안약점입니다.
+      char[]에 저장 후 사용 직후 Arrays.fill()로 지우세요.
+    patterns:
+      - pattern-either:
+          - pattern: String $PASSWORD = $EXPR;
+          - pattern: String $PASSWD = $EXPR;
+          - pattern: String $SECRET = $EXPR;
+          - pattern: String $CREDENTIAL = $EXPR;
+      - metavariable-regex:
+          metavariable: $PASSWORD
+          regex: (?i)(password|passwd|pwd|secret|credential|apikey|api_key|secretkey|secret_key)
+
+  - id: mois-sr2-5-java-properties-plaintext-password
+    metadata:
+      mois_id: "SR2-5"
+      cwe: "CWE-311"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "Properties 파일에서 비밀번호를 평문으로 읽어 사용하면 유출 위험"
+      remediation: "암호화된 설정값을 사용하거나 Vault, KMS 등 시크릿 관리 도구 활용"
+      references:
+        - https://cwe.mitre.org/data/definitions/311.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      Properties에서 비밀번호를 평문으로 읽고 있습니다. SR2-5(CWE-311)
+      암호화되지 않은 중요정보 보안약점입니다.
+      Vault, KMS 등 시크릿 관리 도구를 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: $PROPS.getProperty("password")
+          - pattern: $PROPS.getProperty("db.password")
+          - pattern: $PROPS.getProperty("jdbc.password")
+          - pattern: $PROPS.getProperty("secret")
+          - pattern: $PROPS.getProperty("apiKey")
+
+  - id: mois-sr2-7-java-short-rsa-key
+    metadata:
+      mois_id: "SR2-7"
+      cwe: "CWE-326"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "RSA 키 길이가 2048비트 미만이면 무차별 대입으로 해독 가능"
+      remediation: "RSA 키 길이를 2048비트 이상으로 설정"
+      references:
+        - https://cwe.mitre.org/data/definitions/326.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      RSA 키 길이가 2048비트 미만입니다. SR2-7(CWE-326)
+      충분하지 않은 키 길이 보안약점입니다. RSA 키는 2048비트 이상 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: $KPG.initialize(512)
+          - pattern: $KPG.initialize(768)
+          - pattern: $KPG.initialize(1024)
+      - pattern-inside: |
+          KeyPairGenerator $KPG = KeyPairGenerator.getInstance("RSA");
+          ...
+
+  - id: mois-sr2-7-java-short-aes-key
+    metadata:
+      mois_id: "SR2-7"
+      cwe: "CWE-326"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "AES 키 길이가 128비트 미만이면 보안 강도가 불충분"
+      remediation: "AES 키 길이를 128비트 이상(권장 256비트)으로 설정"
+      references:
+        - https://cwe.mitre.org/data/definitions/326.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      AES 키 길이가 128비트 미만입니다. SR2-7(CWE-326)
+      충분하지 않은 키 길이 보안약점입니다. AES 키는 128비트 이상(권장 256비트)을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: $KG.init(56)
+          - pattern: $KG.init(64)
+      - pattern-inside: |
+          KeyGenerator $KG = KeyGenerator.getInstance("AES");
+          ...
+
+  - id: mois-sr2-9-java-weak-password-validation
+    metadata:
+      mois_id: "SR2-9"
+      cwe: "CWE-521"
+      category: "보안기능"
+      severity: "MEDIUM"
+      description: "비밀번호 길이 검증이 8자 미만이면 무차별 대입 공격에 취약"
+      remediation: "비밀번호 최소 길이 8자 이상, 영문·숫자·특수문자 혼합 정책 적용"
+      references:
+        - https://cwe.mitre.org/data/definitions/521.html
+    languages: [java]
+    severity: WARNING
+    message: |
+      비밀번호 최소 길이 검증이 불충분합니다. SR2-9(CWE-521)
+      취약한 비밀번호 허용 보안약점입니다.
+      비밀번호는 최소 8자 이상, 영문·숫자·특수문자 혼합을 요구하세요.
+    patterns:
+      - pattern-either:
+          - pattern: $PWD.length() < 4
+          - pattern: $PWD.length() < 5
+          - pattern: $PWD.length() < 6
+          - pattern: $PWD.length() < 7
+          - pattern: $PWD.length() >= 4
+          - pattern: $PWD.length() >= 5
+          - pattern: $PWD.length() >= 6
+      - metavariable-regex:
+          metavariable: $PWD
+          regex: (?i)(password|passwd|pwd)
+
+  - id: mois-sr2-10-java-signature-verify-ignored
+    metadata:
+      mois_id: "SR2-10"
+      cwe: "CWE-347"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "Signature.verify() 반환값을 확인하지 않으면 위조된 서명을 수락할 위험"
+      remediation: "Signature.verify() 반환값을 반드시 확인하고 false일 경우 거부 처리"
+      references:
+        - https://cwe.mitre.org/data/definitions/347.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      전자서명 검증 결과를 확인하지 않고 있습니다. SR2-10(CWE-347)
+      부적절한 전자서명 확인 보안약점입니다.
+      Signature.verify() 반환값을 반드시 검사하세요.
+    pattern: $SIG.verify($DATA);
+
+  - id: mois-sr2-10-java-jwt-decode-without-verify
+    metadata:
+      mois_id: "SR2-10"
+      cwe: "CWE-347"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "JWT를 서명 검증 없이 decode만 하면 토큰 위조 공격에 취약"
+      remediation: "JWT.require(algorithm).build().verify(token)을 사용하여 서명 검증 후 클레임 추출"
+      references:
+        - https://cwe.mitre.org/data/definitions/347.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      JWT를 서명 검증 없이 decode만 사용하고 있습니다. SR2-10(CWE-347)
+      부적절한 전자서명 확인 보안약점입니다.
+      JWT.require(algorithm).build().verify(token)을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: JWT.decode($TOKEN)
+          - pattern: Jwts.parser().setSigningKey(...).parseClaimsJwt($TOKEN)

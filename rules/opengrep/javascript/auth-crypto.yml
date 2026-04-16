@@ -1,0 +1,86 @@
+rules:
+  - id: mois-sr2-1-js-express-no-auth
+    metadata:
+      mois_id: "SR2-1"
+      cwe: "CWE-306"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "Express 라우트에 인증 미들웨어 없이 민감 기능 노출"
+      remediation: "인증 미들웨어(passport, JWT 검증 등)를 라우트에 적용하세요."
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: |
+      민감 엔드포인트에 인증 미들웨어가 없습니다. SR2-1 적절한 인증 없는 중요기능 허용 (CWE-306).
+      인증 미들웨어를 추가하세요.
+    patterns:
+      - pattern-either:
+          - pattern: app.get("/admin/...", ($REQ, $RES) => { ... })
+          - pattern: app.post("/admin/...", ($REQ, $RES) => { ... })
+          - pattern: app.get("/api/...", ($REQ, $RES) => { ... })
+          - pattern: app.post("/api/...", ($REQ, $RES) => { ... })
+          - pattern: router.get("/admin/...", ($REQ, $RES) => { ... })
+          - pattern: router.post("/admin/...", ($REQ, $RES) => { ... })
+
+  - id: mois-sr2-5-js-sensitive-data-logging
+    metadata:
+      mois_id: "SR2-5"
+      cwe: "CWE-311"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "console.log에 password, token, secret 등 민감 정보 출력"
+      remediation: "민감 정보를 로그에 출력하지 말고, 마스킹 처리를 적용하세요."
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: |
+      민감 정보를 콘솔에 출력합니다. SR2-5 중요정보 평문 저장·전송 (CWE-311).
+      민감 데이터는 마스킹하세요.
+    patterns:
+      - pattern-either:
+          - pattern: console.log("...password...", $X)
+          - pattern: console.log("...secret...", $X)
+          - pattern: console.log("...token...", $X)
+          - pattern: console.log(`...password...${$X}...`)
+          - pattern: console.log(`...secret...${$X}...`)
+          - pattern: console.log(`...token...${$X}...`)
+          - pattern: "console.log({..., password: $X, ...})"
+          - pattern: "console.log({..., token: $X, ...})"
+          - pattern: "console.log({..., secret: $X, ...})"
+
+  - id: mois-sr2-9-js-weak-password-policy
+    metadata:
+      mois_id: "SR2-9"
+      cwe: "CWE-521"
+      category: "보안기능"
+      severity: "MEDIUM"
+      description: "비밀번호 길이만 검사하는 약한 비밀번호 정책"
+      remediation: "최소 8자, 대소문자, 숫자, 특수문자 조합을 포함하는 정책을 적용하세요."
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: |
+      비밀번호 길이만 검사합니다. SR2-9 취약한 비밀번호 허용 (CWE-521).
+      복잡성 요건(대소문자, 숫자, 특수문자)을 추가하세요.
+    patterns:
+      - pattern-either:
+          - pattern: $PWD.length < 6
+          - pattern: $PWD.length < 8
+          - pattern: password.length < 6
+          - pattern: password.length < 8
+
+  - id: mois-sr2-12-js-insecure-cookie
+    metadata:
+      mois_id: "SR2-12"
+      cwe: "CWE-614"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "res.cookie 설정 시 secure: false 또는 httpOnly: false"
+      remediation: "res.cookie에 secure: true, httpOnly: true, sameSite: 'strict'를 설정하세요."
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: |
+      쿠키에 보안 속성이 미설정됩니다. SR2-12 쿠키 보안 속성 미설정 (CWE-614).
+      secure: true, httpOnly: true를 설정하세요.
+    patterns:
+      - pattern-either:
+          - pattern: "res.cookie($NAME, $VAL, { ..., secure: false, ... })"
+          - pattern: "res.cookie($NAME, $VAL, { ..., httpOnly: false, ... })"
+          - pattern: res.cookie($NAME, $VAL)

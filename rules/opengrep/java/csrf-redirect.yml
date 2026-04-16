@@ -1,0 +1,100 @@
+rules:
+  - id: mois-sr1-10-java-csrf-disable
+    metadata:
+      mois_id: "SR1-10"
+      cwe: "CWE-352"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "Spring Security에서 CSRF 보호를 비활성화하면 CSRF 공격에 취약"
+      remediation: "csrf().disable() 제거. CsrfTokenRepository(HttpSessionCsrfTokenRepository 또는 CookieCsrfTokenRepository) 사용"
+      references:
+        - https://cwe.mitre.org/data/definitions/352.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      Spring Security에서 CSRF 보호가 비활성화되어 있습니다. SR1-10(CWE-352)
+      CSRF 보안약점입니다. csrf().disable() 호출을 제거하고 CSRF 토큰 검증을 유지하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $HTTP.csrf().disable()
+          - pattern: |
+              $HTTP.csrf(csrf -> csrf.disable())
+          - pattern: |
+              $HTTP.csrf(AbstractHttpConfigurer::disable)
+
+  - id: mois-sr1-10-java-csrf-spring6
+    metadata:
+      mois_id: "SR1-10"
+      cwe: "CWE-352"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "Spring Security 6.x에서 CSRF 보호를 비활성화하면 CSRF 공격에 취약"
+      remediation: "CSRF 비활성화를 제거하거나 REST API인 경우 CookieCsrfTokenRepository 사용 검토"
+      references:
+        - https://cwe.mitre.org/data/definitions/352.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      Spring Security에서 CSRF가 비활성화되어 있습니다. SR1-10(CWE-352)
+      CSRF 보안약점입니다. REST API가 아닌 경우 CSRF 보호를 유지하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $HTTP.csrf($C -> $C.ignoringRequestMatchers("/**"))
+          - pattern: |
+              $CSRF.requireCsrfProtectionMatcher($M -> false)
+
+  - id: mois-sr1-12-java-http-response-splitting
+    metadata:
+      mois_id: "SR1-12"
+      cwe: "CWE-113"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "사용자 입력을 HTTP 응답 헤더에 직접 사용하면 HTTP 응답 분할(CRLF 삽입) 공격에 취약"
+      remediation: "헤더 값에서 CR(\\r)과 LF(\\n) 문자를 제거하거나 인코딩 처리"
+      references:
+        - https://cwe.mitre.org/data/definitions/113.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      사용자 입력이 HTTP 응답 헤더에 직접 설정되고 있습니다. SR1-12(CWE-113)
+      HTTP 응답분할 보안약점입니다. 헤더 값에서 CR/LF 문자를 제거하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RESP.setHeader($NAME, $REQ.getParameter(...));
+          - pattern: |
+              $RESP.addHeader($NAME, $REQ.getParameter(...));
+          - pattern: |
+              String $VAL = $REQ.getParameter(...);
+              ...
+              $RESP.setHeader($NAME, $VAL);
+          - pattern: |
+              String $VAL = $REQ.getParameter(...);
+              ...
+              $RESP.addHeader($NAME, $VAL);
+
+  - id: mois-sr1-12-java-cookie-response-splitting
+    metadata:
+      mois_id: "SR1-12"
+      cwe: "CWE-113"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "사용자 입력을 Cookie 값에 직접 사용하면 HTTP 응답 분할 공격에 취약"
+      remediation: "Cookie 값에서 CR(\\r), LF(\\n) 문자를 제거. URLEncoder로 인코딩 처리"
+      references:
+        - https://cwe.mitre.org/data/definitions/113.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      사용자 입력이 Cookie 값에 직접 설정되고 있습니다. SR1-12(CWE-113)
+      HTTP 응답분할 보안약점입니다. Cookie 값에서 CR/LF 문자를 제거하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              new Cookie($NAME, $REQ.getParameter(...))
+          - pattern: |
+              String $VAL = $REQ.getParameter(...);
+              ...
+              new Cookie($NAME, $VAL);

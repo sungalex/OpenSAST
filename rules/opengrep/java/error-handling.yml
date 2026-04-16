@@ -1,0 +1,87 @@
+rules:
+  - id: mois-sr4-2-java-empty-catch-block
+    metadata:
+      mois_id: "SR4-2"
+      cwe: "CWE-391"
+      category: "에러처리"
+      severity: "HIGH"
+      description: "빈 catch 블록은 예외를 무시하여 오류 상황에 대응하지 못하게 함"
+      remediation: "catch 블록에서 로깅, 재시도 또는 적절한 예외 처리를 수행"
+      references:
+        - https://cwe.mitre.org/data/definitions/391.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      빈 catch 블록이 있습니다. SR4-2(CWE-391)
+      오류 상황 대응 부재 보안약점입니다.
+      catch 블록에서 적절한 예외 처리(로깅, 재시도, 알림 등)를 수행하세요.
+    patterns:
+      - pattern: |
+          try { ... } catch ($TYPE $EX) { }
+
+  - id: mois-sr4-2-java-ignored-exception-comment-only
+    metadata:
+      mois_id: "SR4-2"
+      cwe: "CWE-703"
+      category: "에러처리"
+      severity: "MEDIUM"
+      description: "catch 블록에서 예외를 무시하고 주석만 남기면 실질적 오류 대응이 없음"
+      remediation: "최소한 로거를 사용하여 예외 정보를 기록"
+      references:
+        - https://cwe.mitre.org/data/definitions/703.html
+    languages: [java]
+    severity: WARNING
+    message: |
+      catch 블록에서 예외를 무시하고 있습니다. SR4-2(CWE-703)
+      오류 상황 대응 부재 보안약점입니다.
+      최소한 logger.error()로 예외 정보를 기록하세요.
+    patterns:
+      - pattern: |
+          try { ... } catch ($TYPE $EX) { $EXPR; }
+      - metavariable-regex:
+          metavariable: $EXPR
+          regex: .*// .*
+
+  - id: mois-sr4-3-java-catch-generic-exception
+    metadata:
+      mois_id: "SR4-3"
+      cwe: "CWE-396"
+      category: "에러처리"
+      severity: "MEDIUM"
+      description: "catch (Exception e) 또는 catch (Throwable e)로 포괄적 예외를 잡으면 세밀한 오류 처리가 불가"
+      remediation: "IOException, SQLException 등 구체적인 예외 타입별로 처리"
+      references:
+        - https://cwe.mitre.org/data/definitions/396.html
+    languages: [java]
+    severity: WARNING
+    message: |
+      포괄적 예외 타입을 잡고 있습니다. SR4-3(CWE-396)
+      부적절한 예외처리 보안약점입니다.
+      IOException, SQLException 등 구체적인 예외 타입을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              try { ... } catch (Exception $EX) { ... }
+          - pattern: |
+              try { ... } catch (Throwable $EX) { ... }
+
+  - id: mois-sr4-3-java-throws-generic-exception
+    metadata:
+      mois_id: "SR4-3"
+      cwe: "CWE-397"
+      category: "에러처리"
+      severity: "MEDIUM"
+      description: "메서드 시그니처에 throws Exception을 선언하면 호출자가 구체적 예외 처리를 할 수 없음"
+      remediation: "throws IOException, SQLException 등 구체적인 예외 타입 선언"
+      references:
+        - https://cwe.mitre.org/data/definitions/397.html
+    languages: [java]
+    severity: WARNING
+    message: |
+      메서드에 throws Exception 포괄적 예외를 선언하고 있습니다. SR4-3(CWE-397)
+      부적절한 예외처리 보안약점입니다.
+      구체적인 예외 타입(IOException, SQLException 등)을 선언하세요.
+    patterns:
+      - pattern-either:
+          - pattern: $RET $METHOD(...) throws Exception { ... }
+          - pattern: $RET $METHOD(...) throws Throwable { ... }

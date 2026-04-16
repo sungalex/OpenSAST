@@ -1,0 +1,94 @@
+rules:
+  - id: mois-sr1-7-java-xxe-documentbuilder
+    metadata:
+      mois_id: "SR1-7"
+      cwe: "CWE-611"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "DocumentBuilderFactory에서 외부 엔터티 처리를 비활성화하지 않으면 XXE 공격에 취약"
+      remediation: "setFeature(\"http://apache.org/xml/features/disallow-doctype-decl\", true) 설정 또는 setFeature(\"http://xml.org/sax/features/external-general-entities\", false) 설정"
+      references:
+        - https://cwe.mitre.org/data/definitions/611.html
+        - https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      DocumentBuilderFactory에서 외부 엔터티 처리가 비활성화되지 않았습니다. SR1-7(CWE-611)
+      XXE 보안약점입니다. disallow-doctype-decl 또는 external-general-entities를 비활성화하세요.
+    patterns:
+      - pattern: |
+          DocumentBuilderFactory $DBF = DocumentBuilderFactory.newInstance();
+          ...
+          $DB = $DBF.newDocumentBuilder();
+      - pattern-not: |
+          DocumentBuilderFactory $DBF = DocumentBuilderFactory.newInstance();
+          ...
+          $DBF.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+          ...
+          $DB = $DBF.newDocumentBuilder();
+      - pattern-not: |
+          DocumentBuilderFactory $DBF = DocumentBuilderFactory.newInstance();
+          ...
+          $DBF.setFeature("http://xml.org/sax/features/external-general-entities", false);
+          ...
+          $DB = $DBF.newDocumentBuilder();
+
+  - id: mois-sr1-7-java-xxe-saxparser
+    metadata:
+      mois_id: "SR1-7"
+      cwe: "CWE-611"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "SAXParserFactory에서 외부 엔터티 처리를 비활성화하지 않으면 XXE 공격에 취약"
+      remediation: "setFeature(\"http://apache.org/xml/features/disallow-doctype-decl\", true) 또는 setFeature(\"http://xml.org/sax/features/external-general-entities\", false) 설정"
+      references:
+        - https://cwe.mitre.org/data/definitions/611.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      SAXParserFactory에서 외부 엔터티 처리가 비활성화되지 않았습니다. SR1-7(CWE-611)
+      XXE 보안약점입니다. disallow-doctype-decl 피처를 활성화하세요.
+    patterns:
+      - pattern: |
+          SAXParserFactory $SPF = SAXParserFactory.newInstance();
+          ...
+          $SP = $SPF.newSAXParser();
+      - pattern-not: |
+          SAXParserFactory $SPF = SAXParserFactory.newInstance();
+          ...
+          $SPF.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+          ...
+          $SP = $SPF.newSAXParser();
+      - pattern-not: |
+          SAXParserFactory $SPF = SAXParserFactory.newInstance();
+          ...
+          $SPF.setFeature("http://xml.org/sax/features/external-general-entities", false);
+          ...
+          $SP = $SPF.newSAXParser();
+
+  - id: mois-sr1-7-java-xxe-xmlinputfactory
+    metadata:
+      mois_id: "SR1-7"
+      cwe: "CWE-611"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "XMLInputFactory에서 외부 엔터티와 DTD 처리를 비활성화하지 않으면 XXE 공격에 취약"
+      remediation: "XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES와 SUPPORT_DTD를 false로 설정"
+      references:
+        - https://cwe.mitre.org/data/definitions/611.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      XMLInputFactory에서 외부 엔터티 처리가 비활성화되지 않았습니다. SR1-7(CWE-611)
+      XXE 보안약점입니다. IS_SUPPORTING_EXTERNAL_ENTITIES와 SUPPORT_DTD를 false로 설정하세요.
+    patterns:
+      - pattern: |
+          XMLInputFactory $XIF = XMLInputFactory.newInstance();
+          ...
+          $XIF.createXMLStreamReader(...);
+      - pattern-not: |
+          XMLInputFactory $XIF = XMLInputFactory.newInstance();
+          ...
+          $XIF.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
+          ...
+          $XIF.createXMLStreamReader(...);

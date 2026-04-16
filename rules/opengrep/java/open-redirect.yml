@@ -1,0 +1,50 @@
+rules:
+  - id: mois-sr1-6-java-open-redirect-sendredirect
+    metadata:
+      mois_id: "SR1-6"
+      cwe: "CWE-601"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "사용자 입력값을 sendRedirect()에 직접 전달하면 피싱 등 오픈 리다이렉트 공격에 취약"
+      remediation: "리다이렉트 대상 URL을 화이트리스트로 검증하거나, 상대 경로만 허용하고 외부 도메인 차단"
+      references:
+        - https://cwe.mitre.org/data/definitions/601.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      사용자 입력값이 sendRedirect()에 직접 전달되고 있습니다. SR1-6(CWE-601)
+      신뢰되지 않는 URL 주소로 자동접속 보안약점입니다. 화이트리스트 URL 검증을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RESP.sendRedirect($REQ.getParameter(...));
+          - pattern: |
+              String $URL = $REQ.getParameter(...);
+              ...
+              $RESP.sendRedirect($URL);
+          - pattern: |
+              $RESP.sendRedirect((String) $REQ.getAttribute(...));
+
+  - id: mois-sr1-6-java-open-redirect-spring
+    metadata:
+      mois_id: "SR1-6"
+      cwe: "CWE-601"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "Spring 컨트롤러에서 사용자 입력을 redirect: 접두사와 결합하면 오픈 리다이렉트에 취약"
+      remediation: "리다이렉트 URL을 화이트리스트로 검증하거나, 허용된 내부 경로만 사용"
+      references:
+        - https://cwe.mitre.org/data/definitions/601.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      Spring 컨트롤러에서 사용자 입력을 redirect:에 결합하고 있습니다. SR1-6(CWE-601)
+      오픈 리다이렉트 보안약점입니다. 리다이렉트 URL 화이트리스트 검증을 적용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              return "redirect:" + $URL;
+          - pattern: |
+              return new RedirectView($URL);
+      - pattern-not: |
+          return "redirect:/...";

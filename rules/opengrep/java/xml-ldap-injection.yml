@@ -1,0 +1,78 @@
+rules:
+  - id: mois-sr1-8-java-xml-injection
+    metadata:
+      mois_id: "SR1-8"
+      cwe: "CWE-91"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "사용자 입력을 XML 문서 생성에 직접 사용하면 XML 삽입 공격에 취약"
+      remediation: "XML 특수문자(<, >, &, ', \")를 이스케이핑 처리. XML 라이브러리의 안전한 API(DOM, JAXB 등) 사용"
+      references:
+        - https://cwe.mitre.org/data/definitions/91.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      사용자 입력이 XML 문서 생성에 직접 사용되고 있습니다. SR1-8(CWE-91)
+      XML 삽입 보안약점입니다. XML 특수문자를 이스케이핑하거나 안전한 XML API를 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              String $XML = "<" + ... + $REQ.getParameter(...) + ...;
+          - pattern: |
+              $BUF.append("<" + ... + $REQ.getParameter(...) + ...);
+          - pattern: |
+              String $XML = String.format($FMT, ..., $REQ.getParameter(...), ...);
+
+  - id: mois-sr1-8-java-xpath-injection
+    metadata:
+      mois_id: "SR1-8"
+      cwe: "CWE-91"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "사용자 입력을 XPath 쿼리에 직접 사용하면 XPath 삽입 공격에 취약"
+      remediation: "XPath 변수 바인딩(XPathVariableResolver) 사용. 사용자 입력에서 XPath 특수문자 필터링"
+      references:
+        - https://cwe.mitre.org/data/definitions/91.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      사용자 입력이 XPath 쿼리에 직접 결합되고 있습니다. SR1-8(CWE-91)
+      XPath 삽입 보안약점입니다. XPathVariableResolver를 사용하거나 입력값을 이스케이핑하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $XPATH.evaluate($EXPR + $INPUT, ...)
+          - pattern: |
+              $XPATH.compile($EXPR + $INPUT)
+          - pattern: |
+              String $QUERY = "..." + $REQ.getParameter(...) + ...;
+              ...
+              $XPATH.evaluate($QUERY, ...);
+
+  - id: mois-sr1-9-java-ldap-injection
+    metadata:
+      mois_id: "SR1-9"
+      cwe: "CWE-90"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "사용자 입력을 LDAP 검색 필터에 직접 연결하면 LDAP 삽입 공격에 취약"
+      remediation: "LDAP 필터 특수문자(*, (, ), \\, NUL)를 이스케이핑. javax.naming.ldap 패키지의 안전한 API 사용"
+      references:
+        - https://cwe.mitre.org/data/definitions/90.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      사용자 입력이 LDAP 검색 필터에 직접 사용되고 있습니다. SR1-9(CWE-90)
+      LDAP 삽입 보안약점입니다. LDAP 필터 특수문자를 이스케이핑하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $CTX.search($BASE, "..." + $INPUT + "...", ...);
+          - pattern: |
+              String $FILTER = "..." + $REQ.getParameter(...) + ...;
+              ...
+              $CTX.search($BASE, $FILTER, ...);
+          - pattern: |
+              String $FILTER = "(uid=" + $INPUT + ")";
+              ...
+              $CTX.search(..., $FILTER, ...);

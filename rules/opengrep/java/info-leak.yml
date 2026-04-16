@@ -1,0 +1,87 @@
+rules:
+  - id: mois-sr6-3-java-stacktrace-in-response
+    metadata:
+      mois_id: "SR6-3"
+      cwe: "CWE-497"
+      category: "캡슐화"
+      severity: "HIGH"
+      description: "스택 트레이스를 HTTP 응답에 출력하면 내부 클래스명, 파일 경로, 라인 번호가 노출됨"
+      remediation: "사용자에게는 일반적인 오류 메시지만 반환하고, 스택 트레이스는 서버 로그에만 기록"
+      references:
+        - https://cwe.mitre.org/data/definitions/497.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      스택 트레이스를 HTTP 응답에 노출하고 있습니다. SR6-3(CWE-497)
+      시스템 데이터 정보노출 보안약점입니다.
+      사용자에게는 일반 오류 메시지만 반환하고 상세 정보는 서버 로그에 기록하세요.
+    patterns:
+      - pattern-either:
+          - pattern: $EX.printStackTrace($RES.getWriter())
+          - pattern: $EX.printStackTrace($RES.getOutputStream())
+          - pattern: |
+              $WRITER = $RES.getWriter();
+              ...
+              $EX.printStackTrace($WRITER);
+          - pattern: |
+              $RES.getWriter().print($EX.getMessage())
+          - pattern: |
+              $RES.getWriter().write($EX.getMessage())
+
+  - id: mois-sr6-3-java-env-in-response
+    metadata:
+      mois_id: "SR6-3"
+      cwe: "CWE-497"
+      category: "캡슐화"
+      severity: "HIGH"
+      description: "시스템 환경 변수를 HTTP 응답에 포함하면 서버 내부 정보 노출"
+      remediation: "System.getenv() 결과를 응답에 포함하지 않기. 필요하면 허용 목록 기반으로 필터링"
+      references:
+        - https://cwe.mitre.org/data/definitions/497.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      시스템 환경 변수를 HTTP 응답에 포함하고 있습니다. SR6-3(CWE-497)
+      시스템 데이터 정보노출 보안약점입니다.
+      환경 변수를 사용자 응답에 노출하지 마세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $VAL = System.getenv(...);
+              ...
+              $RES.getWriter().print(..., $VAL, ...);
+          - pattern: |
+              $VAL = System.getenv(...);
+              ...
+              $RES.getWriter().write(..., $VAL, ...);
+          - pattern: |
+              $RES.getWriter().print(System.getenv(...))
+          - pattern: |
+              $RES.getWriter().write(System.getenv(...))
+
+  - id: mois-sr6-3-java-server-info-exposure
+    metadata:
+      mois_id: "SR6-3"
+      cwe: "CWE-497"
+      category: "캡슐화"
+      severity: "MEDIUM"
+      description: "서버 경로, 버전 등 시스템 속성을 HTTP 응답이나 헤더에 포함하면 공격 표면 확대"
+      remediation: "서버 정보 헤더를 제거하고 System.getProperty() 결과를 응답에 포함하지 않기"
+      references:
+        - https://cwe.mitre.org/data/definitions/497.html
+    languages: [java]
+    severity: WARNING
+    message: |
+      시스템 속성 정보를 응답에 노출하고 있습니다. SR6-3(CWE-497)
+      시스템 데이터 정보노출 보안약점입니다.
+      서버 경로, 버전 정보를 사용자 응답에 포함하지 마세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RES.getWriter().print(System.getProperty(...))
+          - pattern: |
+              $RES.getWriter().write(System.getProperty(...))
+          - pattern: |
+              $RES.setHeader($NAME, System.getProperty(...))
+          - pattern: |
+              $RES.addHeader("Server", ...)

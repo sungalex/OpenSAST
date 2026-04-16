@@ -1,0 +1,62 @@
+rules:
+  - id: mois-sr4-2-js-empty-catch
+    metadata:
+      mois_id: "SR4-2"
+      cwe: "CWE-391"
+      category: "에러처리"
+      severity: "MEDIUM"
+      description: "catch 블록이 비어있어 예외를 무시"
+      remediation: "예외를 로깅하거나 적절한 오류 처리 로직을 추가하세요."
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: |
+      빈 catch 블록으로 예외를 무시합니다. SR4-2 부적절한 예외 처리 (CWE-391).
+      예외를 로깅하거나 복구 로직을 추가하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              try { ... } catch($E) { }
+          - pattern: |
+              try { ... } catch { }
+
+  - id: mois-sr4-3-js-generic-catch
+    metadata:
+      mois_id: "SR4-3"
+      cwe: "CWE-396"
+      category: "에러처리"
+      severity: "MEDIUM"
+      description: "catch에서 에러 유형 구분 없이 포괄적으로 처리"
+      remediation: "instanceof로 에러 유형을 구분하여 각각 적절히 처리하세요."
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: |
+      에러 유형을 구분하지 않고 포괄 처리합니다. SR4-3 광범위한 예외 클래스 사용 (CWE-396).
+      instanceof로 에러 유형을 구분하세요.
+    patterns:
+      - pattern: |
+          try { ... } catch($E) { console.log($E); }
+      - pattern: |
+          try { ... } catch($E) { console.error($E); }
+
+  - id: mois-sr6-3-js-system-info-exposure
+    metadata:
+      mois_id: "SR6-3"
+      cwe: "CWE-497"
+      category: "캡슐화"
+      severity: "HIGH"
+      description: "process.env 또는 stack trace를 응답에 포함하여 시스템 정보 노출"
+      remediation: "환경변수와 스택 트레이스를 클라이언트 응답에 포함하지 마세요."
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: |
+      시스템 정보를 응답에 노출합니다. SR6-3 시스템 정보 노출 (CWE-497).
+      환경변수, 스택 트레이스를 응답에 포함하지 마세요.
+    patterns:
+      - pattern-either:
+          - pattern: res.json(process.env)
+          - pattern: "res.json({ ..., env: process.env, ... })"
+          - pattern: res.send(process.env)
+          - pattern: "res.json({ ..., stack: $ERR.stack, ... })"
+          - pattern: res.send($ERR.stack)
+          - pattern: "res.status(...).json({ ..., stack: $ERR.stack, ... })"
+          - pattern: res.status(...).send($ERR.stack)

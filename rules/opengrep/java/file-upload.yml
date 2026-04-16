@@ -1,0 +1,58 @@
+rules:
+  - id: mois-sr1-5-java-file-upload-no-ext-check
+    metadata:
+      mois_id: "SR1-5"
+      cwe: "CWE-434"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "MultipartFile을 확장자 검증 없이 직접 저장하면 악성 파일(웹쉘 등) 업로드에 취약"
+      remediation: "화이트리스트 기반 확장자 검증 후 UUID 등 무작위 파일명으로 저장. 업로드 디렉토리에서 실행 권한 제거"
+      references:
+        - https://cwe.mitre.org/data/definitions/434.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      MultipartFile을 확장자 검증 없이 transferTo()로 직접 저장하고 있습니다. SR1-5(CWE-434)
+      위험한 형식 파일 업로드 보안약점입니다. 화이트리스트 확장자 검증과 UUID 파일명을 사용하세요.
+    patterns:
+      - pattern: |
+          $FILE.transferTo(...);
+      - pattern-not-inside: |
+          if (<... $FILE.getOriginalFilename() ...>) {
+            ...
+          }
+      - pattern-not-inside: |
+          if (<... $EXT.contains(...) ...>) {
+            ...
+          }
+      - metavariable-type:
+          metavariable: $FILE
+          types:
+            - org.springframework.web.multipart.MultipartFile
+            - MultipartFile
+
+  - id: mois-sr1-5-java-file-upload-original-name
+    metadata:
+      mois_id: "SR1-5"
+      cwe: "CWE-434"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "getOriginalFilename()을 파일 경로에 직접 사용하면 경로 조작 및 악성 파일 업로드에 취약"
+      remediation: "원본 파일명 대신 UUID 등 무작위 생성 파일명 사용. 확장자는 화이트리스트로 검증"
+      references:
+        - https://cwe.mitre.org/data/definitions/434.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      getOriginalFilename() 반환값을 파일 경로 생성에 직접 사용하고 있습니다. SR1-5(CWE-434)
+      위험한 형식 파일 업로드 및 경로 조작 보안약점입니다. UUID 파일명과 화이트리스트 확장자 검증을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              new File(..., $F.getOriginalFilename())
+          - pattern: |
+              Paths.get(..., $F.getOriginalFilename())
+          - pattern: |
+              $PATH + $F.getOriginalFilename()
+          - pattern: |
+              new File($DIR + $F.getOriginalFilename())

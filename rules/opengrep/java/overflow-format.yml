@@ -1,0 +1,117 @@
+rules:
+  - id: mois-sr1-13-java-integer-overflow-parse
+    metadata:
+      mois_id: "SR1-13"
+      cwe: "CWE-190"
+      category: "입력데이터 검증 및 표현"
+      severity: "MEDIUM"
+      description: "사용자 입력을 parseInt/valueOf로 변환 후 범위 검증 없이 배열 인덱스나 크기에 사용하면 정수형 오버플로우에 취약"
+      remediation: "변환 결과를 사용 전 범위(0 이상, 최대값 이하)를 검증. Math.addExact/multiplyExact 등 오버플로우 감지 메서드 사용"
+      references:
+        - https://cwe.mitre.org/data/definitions/190.html
+    languages: [java]
+    severity: WARNING
+    message: |
+      사용자 입력의 정수 변환 결과가 범위 검증 없이 사용되고 있습니다. SR1-13(CWE-190)
+      정수형 오버플로우 보안약점입니다. 변환 결과의 범위를 검증하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              int $N = Integer.parseInt($REQ.getParameter(...));
+              ...
+              new $TYPE[$N];
+          - pattern: |
+              int $N = Integer.parseInt($REQ.getParameter(...));
+              ...
+              $ARR[$N] = ...;
+          - pattern: |
+              int $N = Integer.valueOf($REQ.getParameter(...));
+              ...
+              new $TYPE[$N];
+
+  - id: mois-sr1-13-java-integer-overflow-cast
+    metadata:
+      mois_id: "SR1-13"
+      cwe: "CWE-190"
+      category: "입력데이터 검증 및 표현"
+      severity: "MEDIUM"
+      description: "큰 정수형을 작은 정수형으로 캐스팅하면 오버플로우가 발생할 수 있음"
+      remediation: "Math.toIntExact() 사용 또는 캐스팅 전 범위 검증"
+      references:
+        - https://cwe.mitre.org/data/definitions/190.html
+    languages: [java]
+    severity: WARNING
+    message: |
+      long을 int로 직접 캐스팅하고 있습니다. SR1-13(CWE-190)
+      정수형 오버플로우 보안약점입니다. Math.toIntExact() 사용 또는 범위 검증을 추가하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              (int) $LONG_VAL
+          - pattern: |
+              int $VAR = (int) $LONG_VAL;
+      - metavariable-type:
+          metavariable: $LONG_VAL
+          types:
+            - long
+            - Long
+
+  - id: mois-sr1-14-java-ip-auth-bypass
+    metadata:
+      mois_id: "SR1-14"
+      cwe: "CWE-807"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "X-Forwarded-For 헤더나 getRemoteAddr()를 인증/인가 결정에 사용하면 IP 위조를 통한 우회 가능"
+      remediation: "IP 기반 인증/인가를 제거하고 세션 기반 인증 사용. 불가피한 경우 프록시 체인을 고려한 검증 로직 적용"
+      references:
+        - https://cwe.mitre.org/data/definitions/807.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      IP 주소를 보안 기능 결정에 사용하고 있습니다. SR1-14(CWE-807)
+      보안기능 결정에 부적절한 입력값 사용 보안약점입니다. IP 기반 인증 대신 세션 기반 인증을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              String $IP = $REQ.getHeader("X-Forwarded-For");
+              ...
+              if (<... $IP ...>) { ... }
+          - pattern: |
+              String $IP = $REQ.getRemoteAddr();
+              ...
+              if ($IP.equals(...)) { ... }
+          - pattern: |
+              if ($REQ.getHeader("X-Forwarded-For").equals(...)) { ... }
+          - pattern: |
+              if ($REQ.getRemoteAddr().equals(...)) { ... }
+
+  - id: mois-sr1-16-java-format-string
+    metadata:
+      mois_id: "SR1-16"
+      cwe: "CWE-134"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "사용자 입력을 포맷 문자열로 사용하면 포맷 스트링 공격에 취약"
+      remediation: "포맷 문자열은 반드시 상수로 사용. 사용자 입력은 포맷 인자로만 전달"
+      references:
+        - https://cwe.mitre.org/data/definitions/134.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      사용자 입력이 포맷 문자열로 사용되고 있습니다. SR1-16(CWE-134)
+      포맷 스트링 보안약점입니다. 포맷 문자열은 상수로 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              String.format($REQ.getParameter(...), ...)
+          - pattern: |
+              $PW.printf($REQ.getParameter(...), ...)
+          - pattern: |
+              String $FMT = $REQ.getParameter(...);
+              ...
+              String.format($FMT, ...);
+          - pattern: |
+              String $FMT = $REQ.getParameter(...);
+              ...
+              $PW.printf($FMT, ...);

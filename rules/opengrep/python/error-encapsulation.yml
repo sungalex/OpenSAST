@@ -1,0 +1,141 @@
+rules:
+  - id: mois-sr4-2-python-empty-except
+    metadata:
+      mois_id: "SR4-2"
+      cwe: "CWE-391"
+      category: "에러처리"
+      severity: "MEDIUM"
+      description: "except 블록에서 예외를 무시하고 pass로 처리"
+      remediation: "예외를 로깅하거나 적절한 복구 로직을 추가하세요."
+    languages: [python]
+    severity: WARNING
+    message: |
+      예외를 무시합니다(except: pass). SR4-2 부적절한 예외 처리 (CWE-391).
+      예외를 로깅하거나 적절한 복구 로직을 추가하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              try:
+                  ...
+              except:
+                  pass
+          - pattern: |
+              try:
+                  ...
+              except Exception:
+                  pass
+          - pattern: |
+              try:
+                  ...
+              except Exception as $E:
+                  pass
+          - pattern: |
+              try:
+                  ...
+              except $ETYPE:
+                  pass
+
+  - id: mois-sr4-3-python-broad-except
+    metadata:
+      mois_id: "SR4-3"
+      cwe: "CWE-396"
+      category: "에러처리"
+      severity: "MEDIUM"
+      description: "포괄적 예외 처리(bare except, except Exception)로 에러 유형 미구분"
+      remediation: "구체적인 예외 타입(ValueError, IOError 등)을 명시하세요."
+    languages: [python]
+    severity: WARNING
+    message: |
+      포괄적 예외를 사용합니다. SR4-3 광범위한 예외 클래스 사용 (CWE-396).
+      구체적인 예외 타입을 명시하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              try:
+                  ...
+              except Exception as $E:
+                  ...
+          - pattern: |
+              try:
+                  ...
+              except Exception:
+                  ...
+          - pattern: |
+              try:
+                  ...
+              except:
+                  ...
+
+  - id: mois-sr6-1-python-global-user-data
+    metadata:
+      mois_id: "SR6-1"
+      cwe: "CWE-488"
+      category: "캡슐화"
+      severity: "HIGH"
+      description: "Flask 글로벌 변수(모듈 레벨)에 사용자별 세션 데이터를 저장"
+      remediation: "flask.g, flask.session, 또는 스레드 로컬 저장소를 사용하세요."
+    languages: [python]
+    severity: ERROR
+    message: |
+      글로벌 변수에 사용자별 데이터를 저장합니다. SR6-1 세션 데이터 노출 (CWE-488).
+      flask.g 또는 flask.session을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              current_user = $X
+              ...
+              @app.route(...)
+              def $FUNC(...):
+                  ...
+          - pattern: |
+              user_data = {}
+              ...
+              @app.route(...)
+              def $FUNC(...):
+                  ...
+
+  - id: mois-sr6-3-python-system-info-exposure
+    metadata:
+      mois_id: "SR6-3"
+      cwe: "CWE-497"
+      category: "캡슐화"
+      severity: "HIGH"
+      description: "os.environ 또는 traceback을 응답에 포함하여 시스템 정보 노출"
+      remediation: "환경변수와 스택 트레이스를 응답에 포함하지 마세요. 프로덕션에서 DEBUG=False로 설정하세요."
+    languages: [python]
+    severity: ERROR
+    message: |
+      시스템 정보를 응답에 노출합니다. SR6-3 시스템 정보 노출 (CWE-497).
+      환경변수, 스택 트레이스를 응답에 포함하지 마세요.
+    patterns:
+      - pattern-either:
+          - pattern: return jsonify(os.environ)
+          - pattern: 'return jsonify({..., "env": os.environ, ...})'
+          - pattern: return traceback.format_exc()
+          - pattern: return str(traceback.format_exc())
+          - pattern: 'return jsonify({"error": traceback.format_exc()})'
+          - pattern: $RESP.data = traceback.format_exc()
+
+  - id: mois-sr7-2-python-dangerous-functions
+    metadata:
+      mois_id: "SR7-2"
+      cwe: "CWE-676"
+      category: "API 오용"
+      severity: "HIGH"
+      description: "eval(), exec(), pickle.loads() 등 위험한 함수 사용"
+      remediation: "eval/exec 대신 ast.literal_eval 사용, pickle 대신 json을 사용하세요."
+    languages: [python]
+    severity: ERROR
+    message: |
+      위험한 함수를 사용합니다. SR7-2 위험한 함수 사용 (CWE-676).
+      eval/exec 대신 ast.literal_eval, pickle 대신 json을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: eval($X)
+          - pattern: exec($X)
+          - pattern: pickle.loads($X)
+          - pattern: pickle.load($X)
+          - pattern: marshal.loads($X)
+          - pattern: shelve.open($X)
+          - pattern: yaml.load($X)
+          - pattern: compile($X, $Y, "exec")

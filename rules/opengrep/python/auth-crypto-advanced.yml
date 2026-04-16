@@ -1,0 +1,132 @@
+rules:
+  - id: mois-sr2-1-python-flask-no-auth
+    metadata:
+      mois_id: "SR2-1"
+      cwe: "CWE-306"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "Flask 라우트에 인증 데코레이터(@login_required) 없이 민감 기능 노출"
+      remediation: "Flask-Login의 @login_required 또는 커스텀 인증 데코레이터를 적용하세요."
+    languages: [python]
+    severity: ERROR
+    message: |
+      민감 엔드포인트에 인증이 적용되지 않았습니다. SR2-1 적절한 인증 없는 중요기능 허용 (CWE-306).
+      @login_required 데코레이터를 추가하세요.
+    patterns:
+      - pattern: |
+          @app.route("/admin/...", ...)
+          def $FUNC(...):
+              ...
+      - pattern-not: |
+          @login_required
+          def $FUNC(...):
+              ...
+
+  - id: mois-sr2-3-python-permissive-file-perms
+    metadata:
+      mois_id: "SR2-3"
+      cwe: "CWE-732"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "파일/디렉토리 생성 시 과도한 권한(0o777) 부여"
+      remediation: "최소 권한 원칙에 따라 0o600(파일) 또는 0o700(디렉토리) 이하로 설정하세요."
+    languages: [python]
+    severity: ERROR
+    message: |
+      과도한 파일 권한(0o777)을 설정합니다. SR2-3 과도한 권한 부여 (CWE-732).
+      최소 권한 원칙(0o600/0o700)을 적용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: os.chmod($PATH, 0o777)
+          - pattern: os.chmod($PATH, 0o766)
+          - pattern: os.chmod($PATH, 0o755)
+          - pattern: os.makedirs($PATH, mode=0o777, ...)
+          - pattern: os.makedirs($PATH, 0o777, ...)
+          - pattern: os.mkdir($PATH, 0o777)
+
+  - id: mois-sr2-5-python-sensitive-data-logging
+    metadata:
+      mois_id: "SR2-5"
+      cwe: "CWE-311"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "로그에 password, secret, token 등 민감 정보를 기록"
+      remediation: "민감 정보를 로그에 기록하지 말고, 마스킹 처리를 적용하세요."
+    languages: [python]
+    severity: ERROR
+    message: |
+      로그에 민감 정보(password/secret/token)를 기록합니다. SR2-5 중요정보 평문 저장·전송 (CWE-311).
+      민감 데이터는 마스킹하세요.
+    patterns:
+      - pattern-either:
+          - pattern: logging.info(f"...password...{$X}...")
+          - pattern: logging.info(f"...secret...{$X}...")
+          - pattern: logging.info(f"...token...{$X}...")
+          - pattern: logging.debug(f"...password...{$X}...")
+          - pattern: logging.debug(f"...secret...{$X}...")
+          - pattern: logging.debug(f"...token...{$X}...")
+          - pattern: logging.warning(f"...password...{$X}...")
+          - pattern: print(f"...password...{$X}...")
+          - pattern: print(f"...secret...{$X}...")
+          - pattern: print(f"...token...{$X}...")
+
+  - id: mois-sr2-7-python-weak-crypto-keysize
+    metadata:
+      mois_id: "SR2-7"
+      cwe: "CWE-326"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "RSA 키 크기 2048비트 미만 또는 AES 키 길이 부족"
+      remediation: "RSA는 최소 2048비트, AES는 최소 128비트(권장 256비트) 키를 사용하세요."
+    languages: [python]
+    severity: ERROR
+    message: |
+      부적절한 암호화 키 크기를 사용합니다. SR2-7 충분하지 않은 키 크기 사용 (CWE-326).
+      RSA 2048비트 이상, AES 128비트 이상을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: rsa.generate_private_key(..., key_size=1024, ...)
+          - pattern: rsa.generate_private_key(..., key_size=512, ...)
+          - pattern: RSA.generate(1024, ...)
+          - pattern: RSA.generate(512, ...)
+          - pattern: Crypto.PublicKey.RSA.generate(1024, ...)
+
+  - id: mois-sr2-9-python-weak-password-policy
+    metadata:
+      mois_id: "SR2-9"
+      cwe: "CWE-521"
+      category: "보안기능"
+      severity: "MEDIUM"
+      description: "비밀번호 길이만 검사하는 약한 정책"
+      remediation: "최소 8자, 대소문자, 숫자, 특수문자 조합을 포함하는 비밀번호 정책을 적용하세요."
+    languages: [python]
+    severity: WARNING
+    message: |
+      비밀번호 길이만 검사합니다. SR2-9 취약한 비밀번호 허용 (CWE-521).
+      복잡성 요건(대소문자, 숫자, 특수문자)을 추가하세요.
+    patterns:
+      - pattern-either:
+          - pattern: len($PWD) < 8
+          - pattern: len($PWD) < 6
+          - pattern: len(password) < 8
+          - pattern: len(password) < 6
+
+  - id: mois-sr2-12-python-insecure-cookie
+    metadata:
+      mois_id: "SR2-12"
+      cwe: "CWE-614"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "쿠키 설정 시 secure=False 또는 httponly=False"
+      remediation: "set_cookie에 secure=True, httponly=True, samesite='Lax' 이상을 설정하세요."
+    languages: [python]
+    severity: ERROR
+    message: |
+      쿠키에 보안 속성이 미설정됩니다. SR2-12 쿠키 보안 속성 미설정 (CWE-614).
+      secure=True, httponly=True를 설정하세요.
+    patterns:
+      - pattern-either:
+          - pattern: $RESP.set_cookie($KEY, $VAL, ..., secure=False, ...)
+          - pattern: $RESP.set_cookie($KEY, $VAL, ..., httponly=False, ...)
+          - pattern: SESSION_COOKIE_SECURE = False
+          - pattern: SESSION_COOKIE_HTTPONLY = False

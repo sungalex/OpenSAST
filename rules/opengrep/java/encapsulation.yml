@@ -1,0 +1,79 @@
+rules:
+  - id: mois-sr6-4-java-private-array-returned
+    metadata:
+      mois_id: "SR6-4"
+      cwe: "CWE-495"
+      category: "캡슐화"
+      severity: "LOW"
+      description: "public 메서드에서 private 배열 필드를 직접 반환하면 외부에서 내부 상태를 변경할 수 있다"
+      remediation: "배열의 복사본(clone() 또는 Arrays.copyOf)을 반환"
+      references:
+        - https://cwe.mitre.org/data/definitions/495.html
+    languages: [java]
+    severity: INFO
+    message: |
+      private 배열 필드를 public 메서드에서 직접 반환하고 있습니다.
+      SR6-4(CWE-495) 캡슐화 보안약점입니다. 배열의 방어적 복사본을 반환하세요.
+    patterns:
+      - pattern: |
+          class $CLASS {
+            ...
+            private $TYPE[] $FIELD;
+            ...
+            public $TYPE[] $METHOD(...) {
+              ...
+              return this.$FIELD;
+            }
+          }
+
+  - id: mois-sr6-4-java-private-collection-returned
+    metadata:
+      mois_id: "SR6-4"
+      cwe: "CWE-495"
+      category: "캡슐화"
+      severity: "LOW"
+      description: "public 메서드에서 private 컬렉션 필드를 직접 반환하면 외부에서 내부 상태를 변경할 수 있다"
+      remediation: "Collections.unmodifiableList() 등 불변 뷰 반환"
+    languages: [java]
+    severity: INFO
+    message: |
+      private 컬렉션 필드를 public 메서드에서 직접 반환합니다.
+      SR6-4(CWE-495). Collections.unmodifiableList()로 감싸세요.
+    patterns:
+      - pattern: |
+          class $CLASS {
+            ...
+            private List<...> $FIELD;
+            ...
+            public List<...> $METHOD(...) {
+              ...
+              return this.$FIELD;
+            }
+          }
+
+  - id: mois-sr6-5-java-public-data-to-private-array
+    metadata:
+      mois_id: "SR6-5"
+      cwe: "CWE-496"
+      category: "캡슐화"
+      severity: "LOW"
+      description: "public 메서드의 매개변수(배열)를 private 필드에 직접 할당하면 외부에서 내부 상태를 변경할 수 있다"
+      remediation: "매개변수 배열의 방어적 복사본(clone/Arrays.copyOf)을 저장"
+      references:
+        - https://cwe.mitre.org/data/definitions/496.html
+    languages: [java]
+    severity: INFO
+    message: |
+      public 메서드의 매개변수 배열을 private 필드에 직접 할당하고 있습니다.
+      SR6-5(CWE-496) 캡슐화 보안약점입니다. 방어적 복사본을 저장하세요.
+    patterns:
+      - pattern: |
+          class $CLASS {
+            ...
+            private $TYPE[] $FIELD;
+            ...
+            public void $METHOD($TYPE[] $PARAM) {
+              ...
+              this.$FIELD = $PARAM;
+            }
+          }

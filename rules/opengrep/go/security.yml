@@ -1,0 +1,141 @@
+rules:
+  - id: mois-sr1-5-go-file-upload-content-type-only
+    metadata:
+      mois_id: "SR1-5"
+      cwe: "CWE-434"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "http.Request FormFile에서 Content-Type만 검사하고 확장자 미검증"
+      remediation: "filepath.Ext로 확장자를 검증하고, magic bytes 확인을 추가하세요."
+    languages: [go]
+    severity: ERROR
+    message: |
+      파일 업로드 시 Content-Type만 검사합니다. SR1-5 위험한 형식 파일 업로드 (CWE-434).
+      확장자 화이트리스트와 magic bytes 검증을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: $R.FormFile("...")
+          - pattern: $FILE, $HEADER, $ERR = $R.FormFile(...)
+
+  - id: mois-sr1-6-go-open-redirect
+    metadata:
+      mois_id: "SR1-6"
+      cwe: "CWE-601"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "사용자 입력을 검증 없이 http.Redirect에 전달"
+      remediation: "리다이렉트 대상 URL을 화이트리스트로 검증하고, 상대 경로만 허용하세요."
+    languages: [go]
+    severity: ERROR
+    message: |
+      사용자 입력값을 검증 없이 리다이렉트합니다. SR1-6 오픈 리다이렉트 (CWE-601).
+      URL 화이트리스트 검증을 적용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: http.Redirect($W, $R, $R.URL.Query().Get("..."), ...)
+          - pattern: http.Redirect($W, $R, $R.FormValue("..."), ...)
+          - pattern: |
+              $URL := $R.URL.Query().Get("...")
+              ...
+              http.Redirect($W, $R, $URL, ...)
+
+  - id: mois-sr1-7-go-xxe
+    metadata:
+      mois_id: "SR1-7"
+      cwe: "CWE-611"
+      category: "입력데이터 검증 및 표현"
+      severity: "HIGH"
+      description: "xml.Decoder에서 외부 엔티티 미제한"
+      remediation: "xml.Decoder에 Entity 맵을 nil로 설정하거나 안전한 XML 파서를 사용하세요."
+    languages: [go]
+    severity: ERROR
+    message: |
+      XML 디코더에서 외부 엔티티가 제한되지 않습니다. SR1-7 XML 외부 엔티티 삽입 (CWE-611).
+      외부 엔티티를 비활성화하세요.
+    patterns:
+      - pattern-either:
+          - pattern: xml.NewDecoder($READER)
+          - pattern: xml.Unmarshal($DATA, ...)
+
+  - id: mois-sr2-3-go-permissive-file-perms
+    metadata:
+      mois_id: "SR2-3"
+      cwe: "CWE-732"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "파일/디렉토리 생성 시 과도한 권한(0777) 부여"
+      remediation: "최소 권한 원칙에 따라 0600(파일) 또는 0700(디렉토리) 이하로 설정하세요."
+    languages: [go]
+    severity: ERROR
+    message: |
+      과도한 파일 권한(0777)을 설정합니다. SR2-3 과도한 권한 부여 (CWE-732).
+      최소 권한 원칙(0600/0700)을 적용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: os.WriteFile($PATH, $DATA, 0777)
+          - pattern: os.WriteFile($PATH, $DATA, 0766)
+          - pattern: os.MkdirAll($PATH, 0777)
+          - pattern: os.Mkdir($PATH, 0777)
+          - pattern: os.Chmod($PATH, 0777)
+          - pattern: os.OpenFile($PATH, $FLAGS, 0777)
+
+  - id: mois-sr2-5-go-sensitive-data-logging
+    metadata:
+      mois_id: "SR2-5"
+      cwe: "CWE-311"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "log.Printf에 password, secret, token 등 민감 정보 출력"
+      remediation: "민감 정보를 로그에 기록하지 말고, 마스킹 처리를 적용하세요."
+    languages: [go]
+    severity: ERROR
+    message: |
+      로그에 민감 정보를 기록합니다. SR2-5 중요정보 평문 저장·전송 (CWE-311).
+      민감 데이터는 마스킹하세요.
+    patterns:
+      - pattern-either:
+          - pattern: log.Printf("...password...", $X)
+          - pattern: log.Printf("...secret...", $X)
+          - pattern: log.Printf("...token...", $X)
+          - pattern: log.Println("...password...", $X)
+          - pattern: log.Println("...secret...", $X)
+          - pattern: log.Println("...token...", $X)
+          - pattern: fmt.Printf("...password...", $X)
+          - pattern: fmt.Println("...password...", $X)
+
+  - id: mois-sr4-2-go-error-ignored
+    metadata:
+      mois_id: "SR4-2"
+      cwe: "CWE-391"
+      category: "에러처리"
+      severity: "MEDIUM"
+      description: "err를 _ 변수에 할당하여 에러 무시"
+      remediation: "에러를 확인하고 적절히 처리하세요(if err != nil)."
+    languages: [go]
+    severity: WARNING
+    message: |
+      에러를 무시합니다(_ 할당). SR4-2 부적절한 예외 처리 (CWE-391).
+      if err != nil로 에러를 확인하세요.
+    patterns:
+      - pattern-either:
+          - pattern: $X, _ = $FUNC(...)
+          - pattern: $X, _ := $FUNC(...)
+
+  - id: mois-sr7-2-go-unsafe-pointer
+    metadata:
+      mois_id: "SR7-2"
+      cwe: "CWE-676"
+      category: "API 오용"
+      severity: "HIGH"
+      description: "unsafe.Pointer 사용 또는 os/exec.Command에 사용자 입력 전달"
+      remediation: "unsafe 패키지 사용을 피하고, 외부 입력을 exec.Command에 직접 전달하지 마세요."
+    languages: [go]
+    severity: ERROR
+    message: |
+      위험한 기능을 사용합니다. SR7-2 위험한 함수 사용 (CWE-676).
+      unsafe 패키지와 외부 입력 기반 명령 실행을 피하세요.
+    patterns:
+      - pattern-either:
+          - pattern: unsafe.Pointer($X)
+          - pattern: exec.Command($USERINPUT)
+          - pattern: exec.Command($CMD, $USERINPUT)

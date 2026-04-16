@@ -1,0 +1,132 @@
+rules:
+  - id: mois-sr2-1-java-spring-endpoint-no-auth
+    metadata:
+      mois_id: "SR2-1"
+      cwe: "CWE-306"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "Spring Controller 메서드에 @PreAuthorize, @Secured, @RolesAllowed 어노테이션 없이 중요 기능을 노출하면 인증 우회 가능"
+      remediation: "@PreAuthorize, @Secured, @RolesAllowed 어노테이션을 추가하거나 SecurityFilterChain에서 .authenticated() 설정"
+      references:
+        - https://cwe.mitre.org/data/definitions/306.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      Spring 엔드포인트에 인증/인가 어노테이션이 없습니다. SR2-1(CWE-306)
+      적절한 인증 없는 중요기능 허용 보안약점입니다.
+      @PreAuthorize, @Secured 또는 @RolesAllowed를 추가하세요.
+    patterns:
+      - pattern: |
+          @$MAPPING("...")
+          public $RET $METHOD(...) { ... }
+      - pattern-not: |
+          @PreAuthorize("...")
+          ...
+          public $RET $METHOD(...) { ... }
+      - pattern-not: |
+          @Secured("...")
+          ...
+          public $RET $METHOD(...) { ... }
+      - pattern-not: |
+          @RolesAllowed("...")
+          ...
+          public $RET $METHOD(...) { ... }
+      - metavariable-regex:
+          metavariable: $MAPPING
+          regex: (PostMapping|PutMapping|DeleteMapping|PatchMapping)
+
+  - id: mois-sr2-1-java-permit-all-abuse
+    metadata:
+      mois_id: "SR2-1"
+      cwe: "CWE-306"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "HttpSecurity 설정에서 anyRequest().permitAll()은 모든 경로를 인증 없이 노출"
+      remediation: "anyRequest().authenticated()로 변경하고 필요한 경로만 선별적으로 permitAll() 적용"
+      references:
+        - https://cwe.mitre.org/data/definitions/306.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      HttpSecurity에서 anyRequest().permitAll()을 사용하여 모든 요청을 인증 없이 허용합니다. SR2-1(CWE-306)
+      anyRequest().authenticated()를 사용하고 특정 경로만 선별적으로 permitAll() 허용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $HTTP.authorizeRequests().anyRequest().permitAll()
+          - pattern: |
+              $HTTP.authorizeHttpRequests().anyRequest().permitAll()
+          - pattern: |
+              $HTTP.authorizeHttpRequests($X -> $X.anyRequest().permitAll())
+
+  - id: mois-sr2-2-java-missing-role-check
+    metadata:
+      mois_id: "SR2-2"
+      cwe: "CWE-285"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "관리자 기능에 역할(Role) 검사 없이 접근을 허용하면 권한 상승 취약점 발생"
+      remediation: "@PreAuthorize(\"hasRole('ADMIN')\") 등 역할 기반 접근 제어를 적용"
+      references:
+        - https://cwe.mitre.org/data/definitions/285.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      관리자 기능 경로에 역할 검사가 없습니다. SR2-2(CWE-285) 부적절한 인가 보안약점입니다.
+      @PreAuthorize("hasRole('ADMIN')") 또는 적절한 역할 검사를 추가하세요.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $HTTP.authorizeRequests()
+                  ...
+                  .antMatchers("/admin/**").permitAll()
+          - pattern: |
+              $HTTP.authorizeHttpRequests()
+                  ...
+                  .requestMatchers("/admin/**").permitAll()
+          - pattern: |
+              $HTTP.authorizeHttpRequests($X ->
+                  $X. ... .requestMatchers("/admin/**").permitAll()
+              )
+
+  - id: mois-sr2-3-java-file-permission-world-readable
+    metadata:
+      mois_id: "SR2-3"
+      cwe: "CWE-732"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "파일에 모든 사용자 읽기/쓰기 권한을 부여하면 민감 정보 유출 또는 변조 위험"
+      remediation: "setReadable(true, true), setWritable(true, true)로 소유자 전용 권한 설정"
+      references:
+        - https://cwe.mitre.org/data/definitions/732.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      파일에 모든 사용자 접근 권한을 부여하고 있습니다. SR2-3(CWE-732)
+      중요 자원에 대한 잘못된 권한 설정 보안약점입니다.
+      소유자 전용 권한(ownerOnly=true)을 사용하세요.
+    patterns:
+      - pattern-either:
+          - pattern: $FILE.setReadable(true, false)
+          - pattern: $FILE.setWritable(true, false)
+          - pattern: $FILE.setExecutable(true, false)
+
+  - id: mois-sr2-3-java-posix-permission-777
+    metadata:
+      mois_id: "SR2-3"
+      cwe: "CWE-732"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "PosixFilePermission으로 OTHERS_READ/WRITE/EXECUTE를 설정하면 모든 사용자가 파일에 접근 가능"
+      remediation: "OTHERS 권한을 제거하고 OWNER 권한만 설정"
+      references:
+        - https://cwe.mitre.org/data/definitions/732.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      PosixFilePermission으로 다른 사용자에게 파일 접근 권한을 부여하고 있습니다. SR2-3(CWE-732)
+      OTHERS_READ, OTHERS_WRITE, OTHERS_EXECUTE 권한을 제거하세요.
+    patterns:
+      - pattern-either:
+          - pattern: PosixFilePermission.OTHERS_WRITE
+          - pattern: PosixFilePermission.OTHERS_EXECUTE

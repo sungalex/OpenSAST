@@ -1,0 +1,114 @@
+rules:
+  - id: mois-sr2-12-java-cookie-no-secure
+    metadata:
+      mois_id: "SR2-12"
+      cwe: "CWE-614"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "Cookie에 Secure 플래그를 설정하지 않으면 HTTP 평문 전송으로 쿠키 탈취 가능"
+      remediation: "cookie.setSecure(true)를 호출하여 HTTPS에서만 전송되도록 설정"
+      references:
+        - https://cwe.mitre.org/data/definitions/614.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      Cookie에 Secure 플래그가 false로 설정되어 있습니다. SR2-12(CWE-614)
+      쿠키를 통한 정보노출 보안약점입니다.
+      cookie.setSecure(true)를 호출하세요.
+    pattern: $COOKIE.setSecure(false)
+
+  - id: mois-sr2-12-java-cookie-no-httponly
+    metadata:
+      mois_id: "SR2-12"
+      cwe: "CWE-614"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "Cookie에 HttpOnly 플래그를 설정하지 않으면 JavaScript로 쿠키 접근 가능 (XSS 연계)"
+      remediation: "cookie.setHttpOnly(true)를 호출하여 스크립트 접근 차단"
+      references:
+        - https://cwe.mitre.org/data/definitions/614.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      Cookie에 HttpOnly 플래그가 false로 설정되어 있습니다. SR2-12(CWE-614)
+      쿠키를 통한 정보노출 보안약점입니다.
+      cookie.setHttpOnly(true)를 호출하세요.
+    pattern: $COOKIE.setHttpOnly(false)
+
+  - id: mois-sr2-12-java-cookie-sensitive-data
+    metadata:
+      mois_id: "SR2-12"
+      cwe: "CWE-614"
+      category: "보안기능"
+      severity: "HIGH"
+      description: "Cookie에 비밀번호, 세션 토큰 등 민감 정보를 직접 저장하면 탈취 위험"
+      remediation: "민감 정보를 쿠키에 직접 저장하지 말고 서버 측 세션에 보관"
+      references:
+        - https://cwe.mitre.org/data/definitions/614.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      Cookie에 민감한 정보를 직접 저장하고 있습니다. SR2-12(CWE-614)
+      쿠키를 통한 정보노출 보안약점입니다.
+      민감 정보는 서버 측 세션에 저장하세요.
+    patterns:
+      - pattern: new Cookie($NAME, $VALUE)
+      - metavariable-regex:
+          metavariable: $NAME
+          regex: "(?i)(password|passwd|pwd|token|secret|credential|ssn|credit)"
+
+  - id: mois-sr6-1-java-servlet-instance-variable
+    metadata:
+      mois_id: "SR6-1"
+      cwe: "CWE-488"
+      category: "캡슐화"
+      severity: "HIGH"
+      description: "서블릿 클래스의 인스턴스 변수에 사용자별 데이터를 저장하면 멀티스레드 환경에서 데이터 노출"
+      remediation: "사용자별 데이터는 HttpSession 또는 메서드 로컬 변수에 저장"
+      references:
+        - https://cwe.mitre.org/data/definitions/488.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      서블릿 인스턴스 변수에 사용자 데이터를 저장하고 있습니다. SR6-1(CWE-488)
+      잘못된 세션에 의한 데이터 정보노출 보안약점입니다.
+      HttpSession 또는 메서드 로컬 변수를 사용하세요.
+    patterns:
+      - pattern: |
+          class $SERVLET extends HttpServlet {
+              $TYPE $FIELD = ...;
+              ...
+          }
+      - metavariable-regex:
+          metavariable: $FIELD
+          regex: (?i)(user|username|userId|email|session|token|data|result|info)
+
+  - id: mois-sr6-1-java-servlet-shared-mutable-field
+    metadata:
+      mois_id: "SR6-1"
+      cwe: "CWE-488"
+      category: "캡슐화"
+      severity: "HIGH"
+      description: "서블릿에서 비-final 인스턴스 변수를 doGet/doPost에서 변경하면 다른 사용자에게 데이터 유출"
+      remediation: "doGet/doPost 내에서 로컬 변수를 사용하거나, 인스턴스 변수는 final/불변으로 선언"
+      references:
+        - https://cwe.mitre.org/data/definitions/488.html
+    languages: [java]
+    severity: ERROR
+    message: |
+      서블릿의 doGet/doPost에서 인스턴스 변수를 변경하고 있습니다. SR6-1(CWE-488)
+      멀티스레드 환경에서 데이터가 다른 세션에 노출될 수 있습니다.
+      메서드 로컬 변수를 사용하세요.
+    patterns:
+      - pattern: |
+          class $SERVLET extends HttpServlet {
+              ...
+              public void $DO_METHOD(HttpServletRequest $REQ, HttpServletResponse $RES) {
+                  ...
+                  this.$FIELD = ...;
+                  ...
+              }
+          }
+      - metavariable-regex:
+          metavariable: $DO_METHOD
+          regex: (doGet|doPost|doPut|doDelete|service)
