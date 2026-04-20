@@ -68,7 +68,7 @@ class Finding:
             sort_keys=True,
             ensure_ascii=False,
         )
-        return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:16]
+        return hashlib.sha1(payload.encode("utf-8"), usedforsecurity=False).hexdigest()[:16]
 
     def as_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {
