@@ -393,7 +393,7 @@ OPENSAST_PROFILE=cloud \
 
 | Phase | 항목 |
 |-------|------|
-| ✅ v0.3.1 | 128 테스트, Sparrow 수준 엔터프라이즈 기능 |
+| ✅ v0.3.1 | 128 테스트, 상용 솔루션 수준 엔터프라이즈 기능 |
 | 🚧 v0.4.0 | 본 아키텍처 문서의 모든 항목 (플러그인, 서비스 계층, 프로파일, 보안 미들웨어, 계정 잠금, YAML 카탈로그, 커스텀 오버레이, 확장 훅, Alembic, nginx prod) |
 | v0.5.0 | Refresh token, OIDC/LDAP, Redis 캐시 레이어, `/metrics`, OpenTelemetry |
 | v0.6.0 | 멀티 테넌시 (organizations), 수평 분산 Celery broker HA, S3 업로드 |

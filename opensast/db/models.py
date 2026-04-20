@@ -141,7 +141,7 @@ class Finding(Base, TimestampMixin):
     language: Mapped[str | None] = mapped_column(String(32), nullable=True)
     snippet: Mapped[str | None] = mapped_column(Text, nullable=True)
     raw: Mapped[dict] = mapped_column(JSON, default=dict)
-    # Sparrow 스타일 이슈 상태 워크플로:
+    # 상용 솔루션 스타일 이슈 상태 워크플로:
     #   new: 미확인 (분석 직후)
     #   confirmed: 개발자가 실제 취약점으로 확인
     #   exclusion_requested: 오탐/허용으로 간주, 관리자 승인 대기
@@ -186,7 +186,7 @@ class TriageRecord(Base, TimestampMixin):
 class RuleSet(Base, TimestampMixin):
     """체커 그룹 — 프로젝트별 사용할 룰 화이트/블랙리스트.
 
-    Sparrow 의 '체커 그룹' 과 동일 개념. 엔진 허용 목록과 특정 규칙 ID 포함/제외 목록을
+    상용 솔루션 의 '체커 그룹' 과 동일 개념. 엔진 허용 목록과 특정 규칙 ID 포함/제외 목록을
     관리하며, 프로젝트가 참조하도록 FK 를 추가한다.
     """
 
