@@ -19,7 +19,7 @@ class GosecEngine(Engine):
     supported_languages = ("go",)
 
     def run(self, target: ScanTarget) -> EngineResult:
-        with tempfile.TemporaryDirectory(prefix="aisast-gosec-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="opensast-gosec-") as tmp:
             out_path = Path(tmp) / "gosec.sarif"
             cmd = [
                 self.settings.gosec_bin,

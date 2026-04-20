@@ -96,7 +96,7 @@ _COMMON_PASSWORDS = {
     "admin123",
     "letmein12",
     "welcome1234",
-    "aisast-admin",
+    "opensast-admin",
     "qwerty1234",
     "iloveyou123",
     "monkey1234",

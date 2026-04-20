@@ -75,7 +75,7 @@ def client(db_engine, monkeypatch) -> Iterator[TestClient]:
 
     - get_db: 테스트 엔진의 세션을 yield
     - Celery .delay: no-op MagicMock
-    - 부트스트랩 admin 자동 시드 (admin@opensast.local / aisast-admin)
+    - 부트스트랩 admin 자동 시드 (admin@opensast.local / opensast-admin)
     - LLM 클라이언트는 NoopLLMClient 로 강제 (네트워크 요청 차단)
     """
 
@@ -163,7 +163,7 @@ def _login(client: TestClient, email: str, password: str) -> str:
 
 @pytest.fixture
 def admin_token(client: TestClient) -> str:
-    return _login(client, "admin@opensast.local", "aisast-admin")
+    return _login(client, "admin@opensast.local", "opensast-admin")
 
 
 @pytest.fixture

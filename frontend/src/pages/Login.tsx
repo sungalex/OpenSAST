@@ -6,8 +6,8 @@ import { useAuthStore } from "../store/auth";
 export default function LoginPage() {
   const navigate = useNavigate();
   const setToken = useAuthStore((s) => s.setToken);
-  const [email, setEmail] = useState("admin@aisast.local");
-  const [password, setPassword] = useState("aisast-admin");
+  const [email, setEmail] = useState("admin@opensast.local");
+  const [password, setPassword] = useState("opensast-admin");
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
@@ -28,13 +28,13 @@ export default function LoginPage() {
         onSubmit={handleSubmit}
         className="bg-white shadow-md rounded-lg p-8 w-96 space-y-4"
       >
-        <h1 className="text-2xl font-bold text-brand">aiSAST 로그인</h1>
+        <h1 className="text-2xl font-bold text-brand">openSAST 로그인</h1>
         <p className="text-sm text-slate-500">
           행안부 49개 보안약점 진단 시스템
         </p>
         <p className="text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded p-2">
-          최초 관리자 계정: <code>admin@aisast.local</code> /{" "}
-          <code>aisast-admin</code>
+          최초 관리자 계정: <code>admin@opensast.local</code> /{" "}
+          <code>opensast-admin</code>
           <br />
           (운영 환경에서는 <code>OPENSAST_BOOTSTRAP_ADMIN_*</code> 환경변수로 변경)
         </p>

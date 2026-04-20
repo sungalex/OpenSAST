@@ -19,7 +19,7 @@ class BanditEngine(Engine):
     supported_languages = ("python",)
 
     def run(self, target: ScanTarget) -> EngineResult:
-        with tempfile.TemporaryDirectory(prefix="aisast-bandit-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="opensast-bandit-") as tmp:
             out_path = Path(tmp) / "bandit.sarif"
             cmd = [
                 self.settings.bandit_bin,

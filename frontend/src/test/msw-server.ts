@@ -8,8 +8,8 @@ export const handlers = [
   http.post("/api/auth/login", async ({ request }) => {
     const body = (await request.json()) as { email: string; password: string };
     if (
-      body.email === "admin@aisast.local" &&
-      body.password === "aisast-admin"
+      body.email === "admin@opensast.local" &&
+      body.password === "opensast-admin"
     ) {
       return HttpResponse.json({
         access_token: ADMIN_TOKEN,

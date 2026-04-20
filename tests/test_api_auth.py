@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 def test_login_success(client: TestClient) -> None:
     r = client.post(
         "/api/auth/login",
-        json={"email": "admin@opensast.local", "password": "aisast-admin"},
+        json={"email": "admin@opensast.local", "password": "opensast-admin"},
     )
     assert r.status_code == 200, r.text
     body = r.json()
@@ -22,7 +22,7 @@ def test_login_local_tld_allowed(client: TestClient) -> None:
 
     r = client.post(
         "/api/auth/login",
-        json={"email": "admin@opensast.local", "password": "aisast-admin"},
+        json={"email": "admin@opensast.local", "password": "opensast-admin"},
     )
     assert r.status_code == 200
 

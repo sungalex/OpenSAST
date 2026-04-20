@@ -10,10 +10,10 @@ describe("LoginPage", () => {
     logout();
     renderWithRouter(<LoginPage />);
     expect(
-      screen.getByRole("heading", { name: /aiSAST 로그인/i })
+      screen.getByRole("heading", { name: /openSAST 로그인/i })
     ).toBeInTheDocument();
     const email = screen.getByLabelText(/이메일/i) as HTMLInputElement;
-    expect(email.value).toBe("admin@aisast.local");
+    expect(email.value).toBe("admin@opensast.local");
   });
 
   it("logs in successfully and stores token", async () => {

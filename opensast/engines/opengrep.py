@@ -1,6 +1,6 @@
 """Opengrep (Semgrep CE 호환) 엔진 어댑터.
 
-aiSAST는 1차 Pass 주력 엔진으로 Opengrep/Semgrep을 사용한다. 양쪽 CLI가 SARIF
+openSAST는 1차 Pass 주력 엔진으로 Opengrep/Semgrep을 사용한다. 양쪽 CLI가 SARIF
 출력을 지원하므로 같은 어댑터가 둘 다 처리한다.
 """
 
@@ -30,7 +30,7 @@ class OpengrepEngine(Engine):
         binary = self.settings.opengrep_bin
         if not cfg_dirs:
             log.warning("opengrep: no rule directories found")
-        with tempfile.TemporaryDirectory(prefix="aisast-opengrep-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="opensast-opengrep-") as tmp:
             sarif_path = Path(tmp) / "output.sarif"
             cmd = [binary, "scan"]
             for cfg in cfg_dirs:

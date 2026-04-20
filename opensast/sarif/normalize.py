@@ -78,7 +78,7 @@ def _apply_mois_mapping(finding: Finding, rule: SarifRule | None) -> None:
 
 
 def findings_to_sarif(
-    findings: list[Finding], *, tool_name: str = "aisast"
+    findings: list[Finding], *, tool_name: str = "opensast"
 ) -> dict[str, Any]:
     """Finding 리스트를 SARIF 2.1.0 문서로 직렬화."""
 
@@ -135,7 +135,7 @@ def findings_to_sarif(
                     "driver": {
                         "name": tool_name,
                         "version": "0.1.0",
-                        "informationUri": "https://github.com/aisast",
+                        "informationUri": "https://github.com/sungalex/openSAST",
                         "rules": list(rules_by_id.values()),
                     }
                 },

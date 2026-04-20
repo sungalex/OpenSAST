@@ -30,7 +30,7 @@ export default function NlSearchBox() {
           🔮 자연어 이슈 검색 (LLM)
         </span>
         <span className="text-xs text-slate-500">
-          Sparrow 에 없는 aiSAST 차별화 기능
+          Sparrow 에 없는 openSAST 차별화 기능
         </span>
       </div>
       <form onSubmit={handleSubmit} className="flex gap-2">

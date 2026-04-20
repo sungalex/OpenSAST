@@ -15,7 +15,7 @@ from starlette.responses import JSONResponse, Response
 
 _SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 _EXEMPT_PATHS = {"/api/auth/login", "/api/auth/refresh", "/health", "/ready", "/metrics"}
-_COOKIE_NAME = "aisast_csrf"
+_COOKIE_NAME = "opensast_csrf"
 _HEADER_NAME = "x-csrf-token"
 
 

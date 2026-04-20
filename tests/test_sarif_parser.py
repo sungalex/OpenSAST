@@ -40,7 +40,7 @@ def test_merge_dedupes_duplicates(fixtures_dir: Path) -> None:
 def test_sarif_roundtrip(fixtures_dir: Path) -> None:
     doc = parse_sarif(fixtures_dir / "opengrep-sample.sarif.json")
     findings = findings_from_sarif(doc, engine="opengrep")
-    serialized = findings_to_sarif(findings, tool_name="aisast-test")
+    serialized = findings_to_sarif(findings, tool_name="opensast-test")
     assert serialized["version"] == "2.1.0"
-    assert serialized["runs"][0]["tool"]["driver"]["name"] == "aisast-test"
+    assert serialized["runs"][0]["tool"]["driver"]["name"] == "opensast-test"
     assert len(serialized["runs"][0]["results"]) == len(findings)

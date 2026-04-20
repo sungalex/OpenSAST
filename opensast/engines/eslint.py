@@ -19,7 +19,7 @@ class EslintEngine(Engine):
     supported_languages = ("javascript", "typescript")
 
     def run(self, target: ScanTarget) -> EngineResult:
-        with tempfile.TemporaryDirectory(prefix="aisast-eslint-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="opensast-eslint-") as tmp:
             out_path = Path(tmp) / "eslint.sarif"
             cmd = [
                 self.settings.eslint_bin,

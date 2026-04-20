@@ -19,7 +19,7 @@ def test_account_locks_after_threshold(client: TestClient) -> None:
     # 6번째: 이미 잠금 → 올바른 비밀번호로도 423 반환
     r = client.post(
         "/api/auth/login",
-        json={"email": "admin@opensast.local", "password": "aisast-admin"},
+        json={"email": "admin@opensast.local", "password": "opensast-admin"},
     )
     assert r.status_code == 423
     assert "잠겨" in r.json()["detail"]

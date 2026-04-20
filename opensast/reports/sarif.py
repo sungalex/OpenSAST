@@ -44,5 +44,5 @@ def _to_domain(row: models.Finding) -> Finding:
 
 def build_sarif(scan: models.Scan, findings: list[models.Finding]) -> bytes:
     domain_findings = [_to_domain(f) for f in findings]
-    doc = findings_to_sarif(domain_findings, tool_name=f"aisast/{scan.id}")
+    doc = findings_to_sarif(domain_findings, tool_name=f"opensast/{scan.id}")
     return json.dumps(doc, ensure_ascii=False, indent=2).encode("utf-8")

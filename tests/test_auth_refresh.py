@@ -61,7 +61,7 @@ class TestRefreshEndpoint:
         """로그인 시 refresh token이 HttpOnly 쿠키로 설정."""
         resp = client.post(
             "/api/auth/login",
-            json={"email": "admin@opensast.local", "password": "aisast-admin"},
+            json={"email": "admin@opensast.local", "password": "opensast-admin"},
         )
         assert resp.status_code == 200
         data = resp.json()

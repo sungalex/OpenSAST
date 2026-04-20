@@ -44,7 +44,7 @@ function Shell({ children }: { children: JSX.Element }) {
     <div className="min-h-screen flex flex-col">
       <header className="bg-brand text-white px-6 py-3 flex justify-between items-center shadow-md">
         <div className="flex items-center gap-6">
-          <span className="text-xl font-bold tracking-tight">aiSAST</span>
+          <span className="text-xl font-bold tracking-tight">openSAST</span>
           <nav className="flex gap-1">
             <NavItem to="/dashboard" label="대시보드" />
             <NavItem to="/issues" label="이슈 검색" />
@@ -68,7 +68,7 @@ function Shell({ children }: { children: JSX.Element }) {
         {children}
       </main>
       <footer className="text-xs text-slate-500 text-center py-3 border-t">
-        aiSAST · 행안부 49개 보안약점 진단 · Apache-2.0
+        openSAST · 행안부 49개 보안약점 진단 · Apache-2.0
       </footer>
     </div>
   );

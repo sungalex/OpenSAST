@@ -46,7 +46,7 @@ class CodeqlEngine(Engine):
         pack = _LANG_TO_PACK.get(language)
         if pack is None:
             return EngineResult(engine=self.name, findings=[])
-        with tempfile.TemporaryDirectory(prefix="aisast-codeql-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="opensast-codeql-") as tmp:
             db_dir = Path(tmp) / "db"
             sarif_path = Path(tmp) / "codeql.sarif"
             create_cmd = [

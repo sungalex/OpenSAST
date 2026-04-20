@@ -187,13 +187,13 @@ export default function ProjectsPage() {
                 <div>
                   <label className="text-xs text-slate-500">
                     api/worker 컨테이너 내에서 접근 가능한 절대 경로. <br />
-                    Docker 기본 구성에서는 <code>/var/aisast-work/sources/…</code>{" "}
+                    Docker 기본 구성에서는 <code>/var/opensast-work/sources/…</code>{" "}
                     또는 호스트에서 바인드 마운트한 경로를 사용하세요.
                   </label>
                   <input
                     value={scanPath}
                     onChange={(e) => setScanPath(e.target.value)}
-                    placeholder="/var/aisast-work/sources/my-project"
+                    placeholder="/var/opensast-work/sources/my-project"
                     className="w-full rounded border px-2 py-1 font-mono text-sm"
                   />
                 </div>

@@ -1,4 +1,4 @@
-"""aiSAST CLI.
+"""openSAST CLI.
 
 예시:
   $ opensast scan ./my-project --no-second-pass --no-triage
@@ -29,7 +29,7 @@ from opensast.sarif.normalize import findings_to_sarif
 from opensast.utils.paths import safe_write_text
 
 app = typer.Typer(
-    help="aiSAST — 행안부 49개 구현단계 보안약점 진단 도구",
+    help="openSAST — 행안부 49개 구현단계 보안약점 진단 도구",
     no_args_is_help=True,
 )
 console = Console()
@@ -39,7 +39,7 @@ console = Console()
 def scan(
     path: Path = typer.Argument(..., exists=True, file_okay=False, dir_okay=True),
     output: Path = typer.Option(
-        Path("aisast-result.sarif"), "--output", "-o", help="SARIF 출력 경로"
+        Path("opensast-result.sarif"), "--output", "-o", help="SARIF 출력 경로"
     ),
     json_output: Optional[Path] = typer.Option(
         None, "--json", help="도메인 JSON 출력 경로 (선택)"
@@ -54,14 +54,14 @@ def scan(
 ) -> None:
     """디렉터리를 스캔하고 SARIF 결과를 저장한다."""
 
-    console.print(f"[bold green]aiSAST scanning[/] {path}")
+    console.print(f"[bold green]openSAST scanning[/] {path}")
     options = ScanOptions(
         enable_second_pass=second_pass,
         enable_triage=triage,
         language_hint=language,
     )
     result = run_scan(path, options=options)
-    sarif = findings_to_sarif(result.findings, tool_name="aisast-cli")
+    sarif = findings_to_sarif(result.findings, tool_name="opensast-cli")
     safe_write_text(output, json.dumps(sarif, ensure_ascii=False, indent=2))
     console.print(f"SARIF → [cyan]{output}[/]  ({len(result.findings)} findings)")
     if json_output:
@@ -164,8 +164,8 @@ def serve(
 @app.command()
 def report(
     sarif_path: Path = typer.Argument(..., exists=True, file_okay=True),
-    out_html: Path = typer.Option(Path("aisast-report.html"), "--html"),
-    out_excel: Path = typer.Option(Path("aisast-report.xlsx"), "--excel"),
+    out_html: Path = typer.Option(Path("opensast-report.html"), "--html"),
+    out_excel: Path = typer.Option(Path("opensast-report.xlsx"), "--excel"),
 ) -> None:
     """이미 생성된 SARIF 파일로부터 HTML/Excel 리포트 변환."""
 

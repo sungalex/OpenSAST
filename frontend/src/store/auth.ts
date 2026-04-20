@@ -16,6 +16,6 @@ export const useAuthStore = create<AuthState>()(
       setToken: (token, role) => set({ token, role }),
       logout: () => set({ token: null, role: null }),
     }),
-    { name: "aisast-auth" }
+    { name: "opensast-auth" }
   )
 );

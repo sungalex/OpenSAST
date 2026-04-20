@@ -1,4 +1,4 @@
-"""aiSAST 설정.
+"""openSAST 설정.
 
 3개 배포 프로파일(`local` / `docker` / `cloud`)을 기본값 번들로 제공하며, 모든
 항목은 `OPENSAST_*` 환경변수로 재정의된다. 프로파일은 단지 **기본값만** 바꾼다.
@@ -22,13 +22,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_RULES_DIR = PROJECT_ROOT / "rules"
-DEFAULT_RESOURCES_DIR = PROJECT_ROOT / "aisast" / "resources"
+DEFAULT_RESOURCES_DIR = PROJECT_ROOT / "opensast" / "resources"
 
 # 작업 디렉터리 기본값 — OS 독립적으로 tempfile.gettempdir() 을 사용한다.
-# Linux: /tmp/aisast-work, macOS: /var/folders/.../aisast-work,
-# Windows: %LOCALAPPDATA%/Temp/aisast-work (WSL2 는 Linux 처리)
-# Docker 환경에서는 compose 가 OPENSAST_WORK_DIR=/var/aisast-work 를 명시 주입한다.
-DEFAULT_WORK_DIR = Path(tempfile.gettempdir()) / "aisast-work"
+# Linux: /tmp/opensast-work, macOS: /var/folders/.../opensast-work,
+# Windows: %LOCALAPPDATA%/Temp/opensast-work (WSL2 는 Linux 처리)
+# Docker 환경에서는 compose 가 OPENSAST_WORK_DIR=/var/opensast-work 를 명시 주입한다.
+DEFAULT_WORK_DIR = Path(tempfile.gettempdir()) / "opensast-work"
 
 
 class Profile(str, Enum):
@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     )
 
     # ---- Core -----------------------------------------------------------
-    app_name: str = "aiSAST"
+    app_name: str = "openSAST"
     debug: bool = False
     profile: Profile = Profile.LOCAL
     project_root: Path = PROJECT_ROOT
@@ -96,7 +96,7 @@ class Settings(BaseSettings):
     reference_standards_path: Path | None = None
 
     # ---- Database / Queue ----------------------------------------------
-    database_url: str = "postgresql+psycopg2://aisast:aisast@localhost:5432/aisast"
+    database_url: str = "postgresql+psycopg2://opensast:opensast@localhost:5432/opensast"
     db_pool_size: int = 5
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/1"
@@ -106,7 +106,7 @@ class Settings(BaseSettings):
     minio_endpoint: str = "localhost:9000"
     minio_access_key: str = "minioadmin"
     minio_secret_key: str = "minioadmin"
-    minio_bucket: str = "aisast-sources"
+    minio_bucket: str = "opensast-sources"
     minio_secure: bool = False
 
     # ---- Auth ----------------------------------------------------------
@@ -117,17 +117,17 @@ class Settings(BaseSettings):
     password_required_classes: int = 3  # upper/lower/digit/special 중 N종 이상
     failed_login_threshold: int = 5
     failed_login_lockout_minutes: int = 15
-    refresh_cookie_name: str = "aisast_refresh"
+    refresh_cookie_name: str = "opensast_refresh"
     refresh_cookie_secure: bool = False
     refresh_cookie_samesite: str = "Lax"
     refresh_token_expire_days: int = 7
-    jwt_issuer: str = "aisast"
-    jwt_audience: str = "aisast-api"
+    jwt_issuer: str = "opensast"
+    jwt_audience: str = "opensast-api"
 
     # 최초 부트스트랩 관리자
     bootstrap_admin_email: str = "admin@opensast.local"
-    bootstrap_admin_password: str = "aisast-admin"
-    bootstrap_admin_display_name: str = "aiSAST Admin"
+    bootstrap_admin_password: str = "opensast-admin"
+    bootstrap_admin_display_name: str = "openSAST Admin"
 
     # ---- HTTP / 보안 ----------------------------------------------------
     cors_origins: list[str] = Field(default_factory=lambda: ["*"])
@@ -205,7 +205,7 @@ class Settings(BaseSettings):
             )
         if (
             self.profile is Profile.CLOUD
-            and self.bootstrap_admin_password == "aisast-admin"
+            and self.bootstrap_admin_password == "opensast-admin"
         ):
             warnings.append(
                 "[cloud] 기본 부트스트랩 비밀번호 사용 중 — 즉시 변경하세요"

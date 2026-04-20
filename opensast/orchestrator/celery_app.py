@@ -46,7 +46,7 @@ def recommended_pool() -> str:
 def create_celery_app() -> Celery:
     settings = get_settings()
     app = Celery(
-        "aisast",
+        "opensast",
         broker=settings.celery_broker_url,
         backend=settings.celery_result_backend,
         include=["opensast.orchestrator.tasks"],

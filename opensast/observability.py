@@ -13,7 +13,7 @@ from opensast.utils.logging import get_logger
 log = get_logger(__name__)
 
 
-def init_telemetry(service_name: str = "aisast") -> None:
+def init_telemetry(service_name: str = "opensast") -> None:
     """OpenTelemetry TracerProvider + 계측기를 초기화한다."""
 
     enabled = os.environ.get("OPENSAST_OTEL_ENABLED", "").lower() in ("1", "true", "yes")

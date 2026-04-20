@@ -1,6 +1,6 @@
 """MOIS 외 외부 보안 표준 레퍼런스 매핑.
 
-Sparrow SAST/SAQT가 제공하는 '레퍼런스 분류' 기능을 대체하여 aiSAST는 다음 표준을
+Sparrow SAST/SAQT가 제공하는 '레퍼런스 분류' 기능을 대체하여 openSAST는 다음 표준을
 MOIS 49개 항목과 함께 관리한다:
 
   * CWE (MITRE Common Weakness Enumeration)

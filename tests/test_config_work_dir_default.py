@@ -13,8 +13,8 @@ def test_default_work_dir_uses_system_tempdir() -> None:
 
     expected_prefix = Path(tempfile.gettempdir()).resolve()
     actual = DEFAULT_WORK_DIR.resolve()
-    assert str(actual).startswith(str(expected_prefix)) or actual == expected_prefix / "aisast-work"
-    assert actual.name == "aisast-work"
+    assert str(actual).startswith(str(expected_prefix)) or actual == expected_prefix / "opensast-work"
+    assert actual.name == "opensast-work"
 
 
 def test_settings_work_dir_matches_default() -> None:
@@ -32,7 +32,7 @@ def test_work_dir_is_not_hardcoded_to_var() -> None:
     """기본값이 POSIX 전용 `/var/...` 같은 하드코드가 아니어야 함."""
 
     default_str = str(DEFAULT_WORK_DIR)
-    # /var/aisast-work 같은 하드코드 금지
-    assert default_str != "/var/aisast-work"
+    # /var/opensast-work 같은 하드코드 금지
+    assert default_str != "/var/opensast-work"
     # Docker 경로도 아니어야 함
-    assert "/var/aisast-work" not in default_str
+    assert "/var/opensast-work" not in default_str

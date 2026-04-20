@@ -1,6 +1,6 @@
 # 사용자 정의 레퍼런스 매핑 예시.
 #
-# OPENSAST_REFERENCE_STANDARDS_PATH=/etc/aisast/refs_override.yaml 로 지정하면
+# OPENSAST_REFERENCE_STANDARDS_PATH=/etc/opensast/refs_override.yaml 로 지정하면
 # CWE → 표준 매핑이 내장 OWASP/SANS/PCI 매핑 위에 **추가** 된다.
 #
 # 사용 시나리오:

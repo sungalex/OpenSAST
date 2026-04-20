@@ -26,7 +26,7 @@ class SpotbugsEngine(Engine):
         if not class_dirs:
             log.info("spotbugs: no compiled .class directories found; skipping")
             return EngineResult(engine=self.name, findings=[])
-        with tempfile.TemporaryDirectory(prefix="aisast-spotbugs-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="opensast-spotbugs-") as tmp:
             out_path = Path(tmp) / "spotbugs.sarif"
             cmd = [
                 self.settings.spotbugs_bin,

@@ -4,15 +4,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: aisast
-      POSTGRES_PASSWORD: aisast
-      POSTGRES_DB: aisast
+      POSTGRES_USER: opensast
+      POSTGRES_PASSWORD: opensast
+      POSTGRES_DB: opensast
     ports:
       - "5432:5432"
     volumes:
       - aisast-postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U aisast"]
+      test: ["CMD-SHELL", "pg_isready -U opensast"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -54,21 +54,21 @@ services:
       redis:
         condition: service_healthy
     environment:
-      OPENSAST_DATABASE_URL: postgresql+psycopg2://aisast:aisast@postgres:5432/aisast
+      OPENSAST_DATABASE_URL: postgresql+psycopg2://opensast:opensast@postgres:5432/opensast
       OPENSAST_REDIS_URL: redis://redis:6379/0
       OPENSAST_CELERY_BROKER_URL: redis://redis:6379/1
       OPENSAST_CELERY_RESULT_BACKEND: redis://redis:6379/2
       OPENSAST_MINIO_ENDPOINT: minio:9000
       OPENSAST_OLLAMA_HOST: http://ollama:11434
       OPENSAST_LLM_PROVIDER: ollama
-      OPENSAST_BOOTSTRAP_ADMIN_EMAIL: admin@aisast.local
-      OPENSAST_BOOTSTRAP_ADMIN_PASSWORD: aisast-admin
-      OPENSAST_WORK_DIR: /var/aisast-work
+      OPENSAST_BOOTSTRAP_ADMIN_EMAIL: admin@opensast.local
+      OPENSAST_BOOTSTRAP_ADMIN_PASSWORD: opensast-admin
+      OPENSAST_WORK_DIR: /var/opensast-work
     ports:
       - "8000:8000"
     volumes:
       - ./rules:/app/rules:ro
-      - aisast-work:/var/aisast-work
+      - opensast-work:/var/opensast-work
 
   worker:
     build: .
@@ -77,15 +77,15 @@ services:
       - redis
       - postgres
     environment:
-      OPENSAST_DATABASE_URL: postgresql+psycopg2://aisast:aisast@postgres:5432/aisast
+      OPENSAST_DATABASE_URL: postgresql+psycopg2://opensast:opensast@postgres:5432/opensast
       OPENSAST_CELERY_BROKER_URL: redis://redis:6379/1
       OPENSAST_CELERY_RESULT_BACKEND: redis://redis:6379/2
       OPENSAST_LLM_PROVIDER: ollama
       OPENSAST_OLLAMA_HOST: http://ollama:11434
-      OPENSAST_WORK_DIR: /var/aisast-work
+      OPENSAST_WORK_DIR: /var/opensast-work
     volumes:
       - ./rules:/app/rules:ro
-      - aisast-work:/var/aisast-work
+      - opensast-work:/var/opensast-work
 
   frontend:
     build:
