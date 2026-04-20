@@ -134,7 +134,7 @@ def test_check_excludes_excluded_findings(
 
     from sqlalchemy.orm import sessionmaker
 
-    from aisast.db import models
+    from opensast.db import models
 
     pid = sample_scan_with_findings["project_id"]
     Session_ = sessionmaker(bind=db_engine, autoflush=False, future=True)

@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "aisast"
+name = "opensast"
 version = "0.5.0"
 description = "Open-source multi-engine SAST orchestrator covering Korea MOIS 49 security weakness items"
 readme = "README.md"
@@ -116,10 +116,10 @@ Issues = "https://github.com/sungalex/aiSAST/issues"
 Repository = "https://github.com/sungalex/aiSAST"
 
 [project.scripts]
-aisast = "aisast.cli:app"
+opensast = "opensast.cli:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["aisast"]
+packages = ["opensast"]
 
 [tool.ruff]
 line-length = 100

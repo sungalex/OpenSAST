@@ -28,10 +28,10 @@ def fixtures_dir() -> Path:
 @pytest.fixture(autouse=True)
 def mock_redis_blacklist(monkeypatch):
     """테스트에서 Redis 블랙리스트 호출을 차단."""
-    monkeypatch.setattr("aisast.api.security.is_blacklisted", lambda jti: False)
-    monkeypatch.setattr("aisast.api.security.blacklist_token", lambda jti, ttl_seconds=None: None)
-    monkeypatch.setattr("aisast.api.security.is_refresh_consumed", lambda jti: False)
-    monkeypatch.setattr("aisast.api.security.mark_refresh_consumed", lambda jti, ttl_seconds=7*86400: None)
+    monkeypatch.setattr("opensast.api.security.is_blacklisted", lambda jti: False)
+    monkeypatch.setattr("opensast.api.security.blacklist_token", lambda jti, ttl_seconds=None: None)
+    monkeypatch.setattr("opensast.api.security.is_refresh_consumed", lambda jti: False)
+    monkeypatch.setattr("opensast.api.security.mark_refresh_consumed", lambda jti, ttl_seconds=7*86400: None)
 
 
 # ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ def db_engine():
     StaticPool 을 써야 같은 인메모리 DB 가 여러 connection 에서 공유된다.
     """
 
-    from aisast.db.base import Base
+    from opensast.db.base import Base
 
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
@@ -75,12 +75,12 @@ def client(db_engine, monkeypatch) -> Iterator[TestClient]:
 
     - get_db: 테스트 엔진의 세션을 yield
     - Celery .delay: no-op MagicMock
-    - 부트스트랩 admin 자동 시드 (admin@aisast.local / aisast-admin)
+    - 부트스트랩 admin 자동 시드 (admin@opensast.local / aisast-admin)
     - LLM 클라이언트는 NoopLLMClient 로 강제 (네트워크 요청 차단)
     """
 
     # Celery .delay 모킹 — 실제 브로커 호출 차단
-    from aisast.orchestrator import tasks as task_mod
+    from opensast.orchestrator import tasks as task_mod
 
     monkeypatch.setattr(
         task_mod.run_scan_task, "delay", MagicMock(return_value=None)
@@ -96,15 +96,15 @@ def client(db_engine, monkeypatch) -> Iterator[TestClient]:
     monkeypatch.setenv("AISAST_LLM_PROVIDER", "noop")
 
     # API 모듈 import 후 의존성 오버라이드
-    from aisast.api.deps import get_db
-    from aisast.db import repo
-    from aisast.db.session import session_scope
+    from opensast.api.deps import get_db
+    from opensast.db import repo
+    from opensast.db.session import session_scope
 
     # startup 에서 PostgreSQL 연결 시도를 차단 — 테스트 엔진 재사용
-    monkeypatch.setattr("aisast.api.app.init_engine", lambda s: db_engine)
-    monkeypatch.setattr("aisast.api.app.auto_migrate", lambda e: None)
+    monkeypatch.setattr("opensast.api.app.init_engine", lambda s: db_engine)
+    monkeypatch.setattr("opensast.api.app.auto_migrate", lambda e: None)
 
-    from aisast.api.app import create_app
+    from opensast.api.app import create_app
 
     app = create_app()
 
@@ -134,9 +134,9 @@ def client(db_engine, monkeypatch) -> Iterator[TestClient]:
         finally:
             session.close()
 
-    monkeypatch.setattr("aisast.api.routes.auth.repo", repo)
-    monkeypatch.setattr("aisast.db.session.session_scope", _scope)
-    monkeypatch.setattr("aisast.api.app.session_scope", _scope)
+    monkeypatch.setattr("opensast.api.routes.auth.repo", repo)
+    monkeypatch.setattr("opensast.db.session.session_scope", _scope)
+    monkeypatch.setattr("opensast.api.app.session_scope", _scope)
 
     # 부트스트랩 admin 시드
     with _scope() as session:
@@ -163,7 +163,7 @@ def _login(client: TestClient, email: str, password: str) -> str:
 
 @pytest.fixture
 def admin_token(client: TestClient) -> str:
-    return _login(client, "admin@aisast.local", "aisast-admin")
+    return _login(client, "admin@opensast.local", "aisast-admin")
 
 
 @pytest.fixture
@@ -179,7 +179,7 @@ def analyst_user(client: TestClient, admin_headers: dict[str, str]) -> dict:
         "/api/auth/users",
         headers=admin_headers,
         json={
-            "email": "analyst@aisast.local",
+            "email": "analyst@opensast.local",
             # 정책 준수: 12자 이상, upper+lower+digit+special 중 3종 이상
             "password": "AnalystPass#1",
             "display_name": "Tester",
@@ -192,7 +192,7 @@ def analyst_user(client: TestClient, admin_headers: dict[str, str]) -> dict:
 
 @pytest.fixture
 def analyst_token(client: TestClient, analyst_user: dict) -> str:
-    return _login(client, "analyst@aisast.local", "AnalystPass#1")
+    return _login(client, "analyst@opensast.local", "AnalystPass#1")
 
 
 @pytest.fixture
@@ -228,7 +228,7 @@ def sample_scan_with_findings(
 
     from sqlalchemy.orm import sessionmaker
 
-    from aisast.db import models
+    from opensast.db import models
 
     Session_ = sessionmaker(bind=db_engine, autoflush=False, future=True)
     session = Session_()

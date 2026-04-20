@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from aisast.orchestrator.celery_app import recommended_pool
+from opensast.orchestrator.celery_app import recommended_pool
 
 
 def test_default_pool_posix(monkeypatch: pytest.MonkeyPatch) -> None:

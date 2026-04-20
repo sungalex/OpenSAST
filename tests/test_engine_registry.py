@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aisast.engines.registry import (
+from opensast.engines.registry import (
     ENGINE_CLASSES,
     FIRST_PASS_ENGINES,
     SECOND_PASS_ENGINES,
     available_engines,
     build_engine,
 )
-from aisast.orchestrator.pipeline import ScanOptions, run_scan
+from opensast.orchestrator.pipeline import ScanOptions, run_scan
 
 
 def test_registry_contains_all_engines() -> None:

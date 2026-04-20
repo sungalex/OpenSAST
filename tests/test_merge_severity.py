@@ -1,8 +1,8 @@
 """merge.py severity 비교 로직 테스트 — v0.4.2 회귀 방지."""
 
-from aisast.mois.catalog import Severity
-from aisast.models import CodeLocation, Finding
-from aisast.sarif.merge import _prefers, merge_findings
+from opensast.mois.catalog import Severity
+from opensast.models import CodeLocation, Finding
+from opensast.sarif.merge import _prefers, merge_findings
 
 
 def _make(engine: str, severity: Severity, line: int = 1) -> Finding:

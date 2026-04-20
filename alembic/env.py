@@ -1,6 +1,6 @@
 """Alembic 마이그레이션 환경.
 
-aiSAST 는 `aisast.config.get_settings()` 로부터 DB URL 과 메타데이터를 가져온다.
+aiSAST 는 `opensast.config.get_settings()` 로부터 DB URL 과 메타데이터를 가져온다.
 마이그레이션 CLI:
 
     alembic upgrade head          # 최신 리비전까지 적용
@@ -15,8 +15,8 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from aisast.config import get_settings
-from aisast.db.base import Base
+from opensast.config import get_settings
+from opensast.db.base import Base
 
 # Alembic config
 config = context.config

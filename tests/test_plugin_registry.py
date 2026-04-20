@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from aisast.plugins import Registry, engine_registry, llm_registry, reference_registry
+from opensast.plugins import Registry, engine_registry, llm_registry, reference_registry
 
 
 def test_builtin_engines_registered() -> None:
@@ -45,6 +45,6 @@ def test_registry_get_raises_for_unknown() -> None:
 
 def test_registry_disabled_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AISAST_PLUGINS_DISABLED", "foo,bar")
-    from aisast.plugins.registry import _disabled_plugins
+    from opensast.plugins.registry import _disabled_plugins
 
     assert _disabled_plugins() == {"foo", "bar"}

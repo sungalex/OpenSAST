@@ -150,7 +150,7 @@ def test_search_excludes_excluded_status_by_default(
 
     from sqlalchemy.orm import sessionmaker
 
-    from aisast.db import models
+    from opensast.db import models
 
     Session_ = sessionmaker(bind=db_engine, autoflush=False, future=True)
     session = Session_()

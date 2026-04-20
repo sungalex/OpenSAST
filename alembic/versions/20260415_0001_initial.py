@@ -11,9 +11,9 @@ from __future__ import annotations
 
 from alembic import op
 
-from aisast.db.base import Base
+from opensast.db.base import Base
 # 모델 모듈을 import 해야 Base.metadata 에 테이블이 등록된다
-import aisast.db.models  # noqa: F401
+import opensast.db.models  # noqa: F401
 
 revision = "20260415_0001"
 down_revision = None

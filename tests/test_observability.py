@@ -15,7 +15,7 @@ class TestPrometheusMiddleware:
             assert "aisast_http_requests_total" in body or "# HELP" in body
 
     def test_normalize_path(self):
-        from aisast.api.middleware.prometheus import _normalize_path
+        from opensast.api.middleware.prometheus import _normalize_path
 
         assert _normalize_path("/api/scans/abc123def456/events") == "/api/scans/:id/events"
         assert _normalize_path("/api/findings") == "/api/findings"
@@ -25,7 +25,7 @@ class TestPrometheusMiddleware:
 class TestJSONLogging:
     def test_json_format_configurable(self):
         """AISAST_LOG_FORMAT=json 환경변수로 JSON 로깅 전환 가능."""
-        import aisast.utils.logging as log_mod
+        import opensast.utils.logging as log_mod
 
         log_mod._CONFIGURED = False
         with patch.dict(os.environ, {"AISAST_LOG_FORMAT": "json"}):

@@ -2,10 +2,10 @@
 
 from pathlib import Path
 
-from aisast.mois.catalog import Severity
-from aisast.sarif.merge import coverage_by_mois, merge_findings
-from aisast.sarif.normalize import findings_from_sarif, findings_to_sarif
-from aisast.sarif.parser import parse_sarif
+from opensast.mois.catalog import Severity
+from opensast.sarif.merge import coverage_by_mois, merge_findings
+from opensast.sarif.normalize import findings_from_sarif, findings_to_sarif
+from opensast.sarif.parser import parse_sarif
 
 
 def test_parse_fixture(fixtures_dir: Path) -> None:

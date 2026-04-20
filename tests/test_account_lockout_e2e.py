@@ -12,14 +12,14 @@ def test_account_locks_after_threshold(client: TestClient) -> None:
     for _ in range(5):
         r = client.post(
             "/api/auth/login",
-            json={"email": "admin@aisast.local", "password": "wrong"},
+            json={"email": "admin@opensast.local", "password": "wrong"},
         )
         assert r.status_code == 401
 
     # 6번째: 이미 잠금 → 올바른 비밀번호로도 423 반환
     r = client.post(
         "/api/auth/login",
-        json={"email": "admin@aisast.local", "password": "aisast-admin"},
+        json={"email": "admin@opensast.local", "password": "aisast-admin"},
     )
     assert r.status_code == 423
     assert "잠겨" in r.json()["detail"]

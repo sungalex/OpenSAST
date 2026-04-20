@@ -35,8 +35,8 @@ API_KEY = "sk-1234567890abcdef"
 @pytest.mark.skipif(not shutil.which("semgrep"), reason="semgrep not installed")
 class TestOpengrepEngine:
     def test_detects_sql_injection(self, vuln_python_sql):
-        from aisast.engines.opengrep import OpengrepEngine
-        from aisast.models import ScanTarget
+        from opensast.engines.opengrep import OpengrepEngine
+        from opensast.models import ScanTarget
         engine = OpengrepEngine()
         target = ScanTarget(root=vuln_python_sql)
         result = engine.run(target)
@@ -47,8 +47,8 @@ class TestOpengrepEngine:
 @pytest.mark.skipif(not shutil.which("bandit"), reason="bandit not installed")
 class TestBanditEngine:
     def test_detects_hardcoded_secret(self, vuln_python_hardcoded_pw):
-        from aisast.engines.bandit import BanditEngine
-        from aisast.models import ScanTarget
+        from opensast.engines.bandit import BanditEngine
+        from opensast.models import ScanTarget
         engine = BanditEngine()
         target = ScanTarget(root=vuln_python_hardcoded_pw)
         result = engine.run(target)

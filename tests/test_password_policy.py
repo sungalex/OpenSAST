@@ -7,14 +7,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from aisast.api.security import (
+from opensast.api.security import (
     PasswordPolicyError,
     clear_login_failures,
     is_user_locked,
     register_failed_login,
     validate_password_policy,
 )
-from aisast.config import Settings
+from opensast.config import Settings
 
 
 def _loose_settings() -> Settings:

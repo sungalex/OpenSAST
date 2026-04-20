@@ -5,11 +5,11 @@ from __future__ import annotations
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from aisast.api.security import verify_password
-from aisast.config import Settings
-from aisast.db import repo
-from aisast.db.base import Base
-from aisast.db.models import User
+from opensast.api.security import verify_password
+from opensast.config import Settings
+from opensast.db import repo
+from opensast.db.base import Base
+from opensast.db.models import User
 
 
 def _make_session():

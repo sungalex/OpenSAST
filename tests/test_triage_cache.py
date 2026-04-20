@@ -1,8 +1,8 @@
 """v0.5.0 Triage 캐시 및 retry 테스트."""
 
-from aisast.llm.triage import Triager
-from aisast.models import CodeLocation, Finding, TriageResult
-from aisast.mois.catalog import Severity
+from opensast.llm.triage import Triager
+from opensast.models import CodeLocation, Finding, TriageResult
+from opensast.mois.catalog import Severity
 
 
 def _make_finding(**kwargs) -> Finding:

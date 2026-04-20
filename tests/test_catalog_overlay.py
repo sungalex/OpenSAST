@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from aisast.mois import references
+from opensast.mois import references
 
 
 def test_load_mois_catalog_without_override(monkeypatch: pytest.MonkeyPatch) -> None:
-    from aisast.config import reset_settings_cache
-    from aisast.mois.loader import load_mois_catalog
+    from opensast.config import reset_settings_cache
+    from opensast.mois.loader import load_mois_catalog
 
     monkeypatch.delenv("AISAST_MOIS_CATALOG_PATH", raising=False)
     reset_settings_cache()
@@ -22,8 +22,8 @@ def test_load_mois_catalog_without_override(monkeypatch: pytest.MonkeyPatch) -> 
 def test_load_mois_catalog_applies_overlay(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from aisast.config import reset_settings_cache
-    from aisast.mois.loader import load_mois_catalog
+    from opensast.config import reset_settings_cache
+    from opensast.mois.loader import load_mois_catalog
 
     overlay = tmp_path / "mois.yaml"
     overlay.write_text(
@@ -59,7 +59,7 @@ items:
 def test_reference_overlay_adds_custom_standards(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from aisast.config import reset_settings_cache
+    from opensast.config import reset_settings_cache
 
     overlay = tmp_path / "refs.yaml"
     overlay.write_text(

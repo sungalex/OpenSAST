@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from aisast.config import Profile, Settings
+from opensast.config import Profile, Settings
 
 
 def test_local_profile_defaults_loose() -> None:

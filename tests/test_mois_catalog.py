@@ -1,6 +1,6 @@
 """행안부 카탈로그 구조 검증."""
 
-from aisast.mois.catalog import (
+from opensast.mois.catalog import (
     MOIS_ITEMS,
     MoisCategory,
     Severity,

@@ -1,9 +1,9 @@
 """LLM Triager 테스트 (Noop 클라이언트 기반)."""
 
-from aisast.llm.noop import NoopLLMClient
-from aisast.llm.triage import Triager, _extract_json_object
-from aisast.mois.catalog import Severity
-from aisast.models import CodeLocation, Finding
+from opensast.llm.noop import NoopLLMClient
+from opensast.llm.triage import Triager, _extract_json_object
+from opensast.mois.catalog import Severity
+from opensast.models import CodeLocation, Finding
 
 
 def _make_finding() -> Finding:

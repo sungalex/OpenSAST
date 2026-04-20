@@ -5,7 +5,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from aisast.config import DEFAULT_WORK_DIR, Settings
+from opensast.config import DEFAULT_WORK_DIR, Settings
 
 
 def test_default_work_dir_uses_system_tempdir() -> None:

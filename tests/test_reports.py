@@ -5,10 +5,10 @@ from __future__ import annotations
 import json
 from datetime import datetime
 
-from aisast.db import models
-from aisast.reports.excel import build_excel
-from aisast.reports.html import build_html
-from aisast.reports.sarif import build_sarif
+from opensast.db import models
+from opensast.reports.excel import build_excel
+from opensast.reports.html import build_html
+from opensast.reports.sarif import build_sarif
 
 
 def _scan() -> models.Scan:

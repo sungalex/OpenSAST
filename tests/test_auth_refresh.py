@@ -1,6 +1,6 @@
 """v0.5.0 인증 강화 테스트 — JWT iat/jti, refresh token."""
 
-from aisast.api.security import (
+from opensast.api.security import (
     create_access_token,
     create_refresh_token,
     decode_access_token,
@@ -36,9 +36,9 @@ class TestJWTEnhancements:
 class TestRefreshEndpoint:
     def test_refresh_returns_new_tokens_via_header(self, client, admin_token):
         """Authorization 헤더 폴백으로 refresh token 제출."""
-        from aisast.api.security import create_refresh_token
+        from opensast.api.security import create_refresh_token
 
-        refresh = create_refresh_token("admin@aisast.local")
+        refresh = create_refresh_token("admin@opensast.local")
         resp = client.post(
             "/api/auth/refresh",
             headers={"Authorization": f"Bearer {refresh}"},
@@ -61,7 +61,7 @@ class TestRefreshEndpoint:
         """로그인 시 refresh token이 HttpOnly 쿠키로 설정."""
         resp = client.post(
             "/api/auth/login",
-            json={"email": "admin@aisast.local", "password": "aisast-admin"},
+            json={"email": "admin@opensast.local", "password": "aisast-admin"},
         )
         assert resp.status_code == 200
         data = resp.json()

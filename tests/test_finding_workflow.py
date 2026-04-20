@@ -2,7 +2,7 @@
 
 import pytest
 
-from aisast.services.finding_service import (
+from opensast.services.finding_service import (
     _ADMIN_TRANSITIONS,
     _SELF_TRANSITIONS as _ALLOWED_SELF_TRANSITIONS,
 )

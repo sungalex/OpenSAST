@@ -16,7 +16,7 @@ def _fresh_engine():
 
 
 def test_auto_migrate_creates_all_tables_on_empty_db() -> None:
-    from aisast.db.migrate import auto_migrate
+    from opensast.db.migrate import auto_migrate
 
     engine = _fresh_engine()
     auto_migrate(engine)
@@ -38,8 +38,8 @@ def test_auto_migrate_creates_all_tables_on_empty_db() -> None:
 def test_auto_migrate_adds_missing_column_to_existing_table() -> None:
     """기존 테이블에서 누락된 컬럼이 자동으로 ADD COLUMN 되는지."""
 
-    from aisast.db.base import Base
-    from aisast.db.migrate import auto_migrate
+    from opensast.db.base import Base
+    from opensast.db.migrate import auto_migrate
 
     engine = _fresh_engine()
     # 1) 모든 테이블을 정상 생성
@@ -95,7 +95,7 @@ def test_auto_migrate_adds_missing_column_to_existing_table() -> None:
 def test_auto_migrate_idempotent() -> None:
     """두 번 실행해도 추가 ALTER 가 발생하지 않아야 한다."""
 
-    from aisast.db.migrate import auto_migrate
+    from opensast.db.migrate import auto_migrate
 
     engine = _fresh_engine()
     auto_migrate(engine)

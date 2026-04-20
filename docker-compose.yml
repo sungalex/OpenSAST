@@ -72,7 +72,7 @@ services:
 
   worker:
     build: .
-    command: celery -A aisast.orchestrator.celery_app.celery_app worker --loglevel=info --concurrency=2
+    command: celery -A opensast.orchestrator.celery_app.celery_app worker --loglevel=info --concurrency=2
     depends_on:
       - redis
       - postgres

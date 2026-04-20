@@ -57,13 +57,13 @@ jobs:
         run: |
           brew install pango cairo libffi
 
-      - name: Install aisast (full)
+      - name: Install opensast (full)
         if: matrix.mode == 'full'
         run: |
           python -m pip install --upgrade pip
           pip install -e '.[dev]'
 
-      - name: Install aisast (smoke — skip heavy extras)
+      - name: Install opensast (smoke — skip heavy extras)
         if: matrix.mode == 'smoke'
         shell: bash
         run: |
@@ -83,12 +83,12 @@ jobs:
       - name: Smoke import test (Windows only)
         if: matrix.mode == 'smoke'
         run: |
-          python -c "import aisast, aisast.api.app, aisast.cli, aisast.plugins, aisast.services; print('ok')"
-          python -c "from aisast.orchestrator.celery_app import recommended_pool; assert recommended_pool() == 'solo', 'expected solo on Windows'; print('celery pool = solo')"
+          python -c "import opensast, opensast.api.app, opensast.cli, opensast.plugins, opensast.services; print('ok')"
+          python -c "from opensast.orchestrator.celery_app import recommended_pool; assert recommended_pool() == 'solo', 'expected solo on Windows'; print('celery pool = solo')"
 
       - name: Run pytest
         if: matrix.mode == 'full'
-        run: pytest -q --tb=short --cov=aisast --cov-report=xml --cov-report=term-missing
+        run: pytest -q --tb=short --cov=opensast --cov-report=xml --cov-report=term-missing
 
       - name: Upload coverage artifact
         if: matrix.mode == 'full' && runner.os == 'Linux'
@@ -109,7 +109,7 @@ jobs:
 
       - name: Run mypy (non-blocking)
         if: matrix.mode == 'full'
-        run: mypy aisast --ignore-missing-imports || true
+        run: mypy opensast --ignore-missing-imports || true
 
       - name: Run pip-audit (non-blocking)
         if: matrix.mode == 'full'
@@ -120,7 +120,7 @@ jobs:
       - name: MOIS catalog assertion
         if: matrix.mode == 'full'
         run: |
-          python -c "from aisast.mois import MOIS_ITEMS; assert len(MOIS_ITEMS) == 49, f'expected 49, got {len(MOIS_ITEMS)}'"
+          python -c "from opensast.mois import MOIS_ITEMS; assert len(MOIS_ITEMS) == 49, f'expected 49, got {len(MOIS_ITEMS)}'"
 
   # -------------------------------------------------------------------------
   # Frontend tests — 모든 OS 에서 동일하게 통과해야 함
@@ -192,10 +192,10 @@ jobs:
           tags: aisast-frontend:ci-${{ github.sha }}
 
   # -------------------------------------------------------------------------
-  # Self-SAST — aisast 가 자기 자신의 Python 코드를 스캔해 회귀 확인
+  # Self-SAST — opensast 가 자기 자신의 Python 코드를 스캔해 회귀 확인
   # -------------------------------------------------------------------------
   self-sast:
-    name: Self-SAST (aisast scans itself)
+    name: Self-SAST (opensast scans itself)
     runs-on: ubuntu-24.04
     needs: backend
     steps:
@@ -208,13 +208,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libpango-1.0-0 libcairo2 libpangoft2-1.0-0 shared-mime-info
-      - name: Install aisast + engines
+      - name: Install opensast + engines
         run: |
           pip install -e '.[dev]'
           pip install "semgrep>=1.70" "bandit[sarif]>=1.7"
-      - name: Run aisast scan
+      - name: Run opensast scan
         run: |
-          aisast scan ./aisast --no-second-pass --no-triage -o self-scan.sarif --json self-scan.json || true
+          opensast scan ./opensast --no-second-pass --no-triage -o self-scan.sarif --json self-scan.json || true
           python -c "
           import json
           data = json.load(open('self-scan.json'))

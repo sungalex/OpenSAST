@@ -57,9 +57,9 @@ def test_persist_scan_result_auto_excludes_matching_findings(
 
     from sqlalchemy.orm import sessionmaker
 
-    from aisast.db import models, repo
-    from aisast.mois.catalog import Severity
-    from aisast.models import (
+    from opensast.db import models, repo
+    from opensast.mois.catalog import Severity
+    from opensast.models import (
         CodeLocation,
         Finding as DomainFinding,
         ScanResult,

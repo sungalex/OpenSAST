@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from aisast.hooks import emit, hook_registry
+from opensast.hooks import emit, hook_registry
 
 
 class _CollectorHook:

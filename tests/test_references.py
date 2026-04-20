@@ -1,6 +1,6 @@
 """다중 레퍼런스(OWASP/SANS/PCI) 매핑 검증."""
 
-from aisast.mois.references import (
+from opensast.mois.references import (
     OWASP_TOP10_2021,
     SANS_TOP25_2023,
     references_for_cwe,

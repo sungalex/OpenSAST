@@ -96,7 +96,7 @@ def test_diff_with_previous_scan_classifies_new_resolved(
 
     from sqlalchemy.orm import sessionmaker
 
-    from aisast.db import models
+    from opensast.db import models
 
     Session_ = sessionmaker(bind=db_engine, autoflush=False, future=True)
     session = Session_()
@@ -184,7 +184,7 @@ def test_source_viewer_path_traversal_blocked(
 
     from sqlalchemy.orm import sessionmaker
 
-    from aisast.db import models
+    from opensast.db import models
 
     # 실 파일이 있는 임시 소스 루트
     src_root = tmp_path / "scan-src"
@@ -235,7 +235,7 @@ def test_source_viewer_missing_directory_410(
 ) -> None:
     from sqlalchemy.orm import sessionmaker
 
-    from aisast.db import models
+    from opensast.db import models
 
     Session_ = sessionmaker(bind=db_engine, autoflush=False, future=True)
     session = Session_()

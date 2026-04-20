@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typer.testing import CliRunner
 
-from aisast.cli import app
+from opensast.cli import app
 
 runner = CliRunner()
 

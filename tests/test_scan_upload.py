@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from aisast.services.scan_service import ScanService
+from opensast.services.scan_service import ScanService
 
 _safe_extract_zip = ScanService._safe_extract_zip
 
@@ -52,7 +52,7 @@ def test_safe_extract_rejects_zip_slip(tmp_path: Path) -> None:
 
 
 def test_git_scan_create_rejects_invalid_url() -> None:
-    from aisast.api.schemas import GitScanCreate
+    from opensast.api.schemas import GitScanCreate
 
     with pytest.raises(ValueError):
         GitScanCreate(project_id=1, git_url="file:///etc/passwd")

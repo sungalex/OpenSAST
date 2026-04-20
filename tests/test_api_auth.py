@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 def test_login_success(client: TestClient) -> None:
     r = client.post(
         "/api/auth/login",
-        json={"email": "admin@aisast.local", "password": "aisast-admin"},
+        json={"email": "admin@opensast.local", "password": "aisast-admin"},
     )
     assert r.status_code == 200, r.text
     body = r.json()
@@ -22,7 +22,7 @@ def test_login_local_tld_allowed(client: TestClient) -> None:
 
     r = client.post(
         "/api/auth/login",
-        json={"email": "admin@aisast.local", "password": "aisast-admin"},
+        json={"email": "admin@opensast.local", "password": "aisast-admin"},
     )
     assert r.status_code == 200
 
@@ -30,7 +30,7 @@ def test_login_local_tld_allowed(client: TestClient) -> None:
 def test_login_wrong_password_returns_401(client: TestClient) -> None:
     r = client.post(
         "/api/auth/login",
-        json={"email": "admin@aisast.local", "password": "WRONG"},
+        json={"email": "admin@opensast.local", "password": "WRONG"},
     )
     assert r.status_code == 401
 
@@ -49,7 +49,7 @@ def test_create_user_requires_admin(
         "/api/auth/users",
         headers=analyst_headers,
         json={
-            "email": "another@aisast.local",
+            "email": "another@opensast.local",
             "password": "long-enough-pw",
             "role": "analyst",
         },
