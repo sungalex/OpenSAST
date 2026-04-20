@@ -7,5 +7,5 @@ __pycache__
 .ruff_cache
 frontend/node_modules
 frontend/dist
-.aisast-work
+.opensast-work
 tests/__pycache__

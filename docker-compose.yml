@@ -10,7 +10,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - aisast-postgres:/var/lib/postgresql/data
+      - opensast-postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U opensast"]
       interval: 10s
@@ -37,14 +37,14 @@ services:
       - "9000:9000"
       - "9001:9001"
     volumes:
-      - aisast-minio:/data
+      - opensast-minio:/data
 
   ollama:
     image: ollama/ollama:latest
     ports:
       - "11434:11434"
     volumes:
-      - aisast-ollama:/root/.ollama
+      - opensast-ollama:/root/.ollama
 
   api:
     build: .
@@ -107,8 +107,8 @@ services:
       - api
 
 volumes:
-  aisast-postgres:
-  aisast-minio:
-  aisast-ollama:
-  aisast-node-modules:
-  aisast-work:
+  opensast-postgres:
+  opensast-minio:
+  opensast-ollama:
+  opensast-node-modules:
+  opensast-work:

@@ -180,7 +180,7 @@ jobs:
           file: Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
-          tags: aisast:ci-${{ github.sha }}
+          tags: opensast:ci-${{ github.sha }}
 
       - name: Build frontend image (multi-arch, no push)
         uses: docker/build-push-action@v5
@@ -189,7 +189,7 @@ jobs:
           file: frontend/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
-          tags: aisast-frontend:ci-${{ github.sha }}
+          tags: opensast-frontend:ci-${{ github.sha }}
 
   # -------------------------------------------------------------------------
   # Self-SAST — opensast 가 자기 자신의 Python 코드를 스캔해 회귀 확인
@@ -220,7 +220,7 @@ jobs:
           data = json.load(open('self-scan.json'))
           high = sum(1 for f in data['findings'] if f['severity'] == 'HIGH')
           print(f'HIGH findings: {high}')
-          assert high == 0, 'aiSAST 내부에서 HIGH 심각도 탐지됨 — PR 병합 전 해결 필요'
+          assert high == 0, 'openSAST 내부에서 HIGH 심각도 탐지됨 — PR 병합 전 해결 필요'
           "
       - name: Upload SARIF
         if: always()

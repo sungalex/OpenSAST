@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /build
 
 COPY pyproject.toml README.md ./
-COPY aisast ./aisast
+COPY opensast ./opensast
 COPY rules ./rules
 
 # Install project dependencies into a virtual-env so we can copy it cleanly
@@ -30,9 +30,9 @@ RUN pip install --no-cache-dir .
 # =============================================================================
 FROM python:3.12-slim AS runtime
 
-LABEL org.opencontainers.image.title="aiSAST" \
+LABEL org.opencontainers.image.title="openSAST" \
       org.opencontainers.image.description="Multi-engine SAST orchestrator for Korea MOIS 49 security weakness items" \
-      org.opencontainers.image.source="https://github.com/sungalex/aiSAST"
+      org.opencontainers.image.source="https://github.com/sungalex/openSAST"
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -60,20 +60,20 @@ RUN pip install --no-cache-dir "semgrep>=1.70" "bandit[sarif]>=1.7"
 WORKDIR /app
 
 # Copy application code and rules
-COPY --from=builder /build/aisast ./aisast
+COPY --from=builder /build/opensast ./opensast
 COPY --from=builder /build/rules ./rules
 COPY --from=builder /build/pyproject.toml /build/README.md ./
 COPY static ./static
 
 # Create non-root user
-RUN useradd -r -u 10001 -m aisast \
-  && chown -R aisast:aisast /app
+RUN useradd -r -u 10001 -m opensast \
+  && chown -R opensast:opensast /app
 
-USER aisast
+USER opensast
 
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
 
-CMD ["uvicorn", "aisast.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "opensast.api.app:app", "--host", "0.0.0.0", "--port", "8000"]

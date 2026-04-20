@@ -48,7 +48,7 @@ services:
       # - "0.0.0.0:443:443"  # TLS 인증서 마운트 후 활성
     volumes:
       - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - aisast-frontend-dist:/usr/share/nginx/html:ro
+      - opensast-frontend-dist:/usr/share/nginx/html:ro
       # - ./deploy/nginx/certs:/etc/nginx/certs:ro
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
@@ -57,4 +57,4 @@ services:
       retries: 6
 
 volumes:
-  aisast-frontend-dist:
+  opensast-frontend-dist:

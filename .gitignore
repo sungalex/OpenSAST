@@ -49,13 +49,13 @@ Thumbs.db
 # Claude Code local settings
 .claude/
 
-# aiSAST work dir (scan extractions, temp data)
-.aisast-work/
-var/aisast-work/
+# openSAST work dir (scan extractions, temp data)
+.opensast-work/
+var/opensast-work/
 
 # Scan outputs (local dev)
-aisast-result.sarif
-aisast-report.html
-aisast-report.xlsx
+opensast-result.sarif
+opensast-report.html
+opensast-report.xlsx
 result.sarif
 result.json

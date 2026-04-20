@@ -7,16 +7,16 @@
 #
 # 예시:
 #   scripts/docker-build-multiarch.sh v0.4.1
-#   scripts/docker-build-multiarch.sh --push ghcr.io/sungalex/aisast:v0.4.1
+#   scripts/docker-build-multiarch.sh --push ghcr.io/sungalex/opensast:v0.4.1
 #
 # 전제:
 #   - Docker Desktop 또는 buildx 플러그인 설치
-#   - `docker buildx create --name aisast --use` 한 번 실행해두기
+#   - `docker buildx create --name opensast --use` 한 번 실행해두기
 #   - 레지스트리 로그인 (`docker login ghcr.io` 등)
 
 set -euo pipefail
 
-TAG="${1:-aisast:local-multiarch}"
+TAG="${1:-opensast:local-multiarch}"
 PLATFORMS="${OPENSAST_PLATFORMS:-linux/amd64,linux/arm64}"
 PUSH="${OPENSAST_PUSH:-false}"
 
@@ -44,7 +44,7 @@ docker "${BUILD_ARGS[@]}"
 echo "== Building frontend image for ${PLATFORMS} =="
 docker buildx build \
   --platform "${PLATFORMS}" \
-  --tag "${TAG/aisast/aisast-frontend}" \
+  --tag "${TAG/opensast/opensast-frontend}" \
   --file frontend/Dockerfile \
   $([[ "${PUSH}" == "true" ]] && echo "--push" || echo "--load") \
   frontend/
