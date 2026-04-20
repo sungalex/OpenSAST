@@ -1,4 +1,4 @@
-"""openSAST 설정.
+"""OpenSAST 설정.
 
 3개 배포 프로파일(`local` / `docker` / `cloud`)을 기본값 번들로 제공하며, 모든
 항목은 `OPENSAST_*` 환경변수로 재정의된다. 프로파일은 단지 **기본값만** 바꾼다.
@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     )
 
     # ---- Core -----------------------------------------------------------
-    app_name: str = "openSAST"
+    app_name: str = "OpenSAST"
     debug: bool = False
     profile: Profile = Profile.LOCAL
     project_root: Path = PROJECT_ROOT
@@ -127,7 +127,7 @@ class Settings(BaseSettings):
     # 최초 부트스트랩 관리자
     bootstrap_admin_email: str = "admin@opensast.local"
     bootstrap_admin_password: str = "opensast-admin"
-    bootstrap_admin_display_name: str = "openSAST Admin"
+    bootstrap_admin_display_name: str = "OpenSAST Admin"
 
     # ---- HTTP / 보안 ----------------------------------------------------
     cors_origins: list[str] = Field(default_factory=lambda: ["*"])

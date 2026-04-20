@@ -19,7 +19,7 @@ Only the latest minor release (0.4.x) receives security patches.
 If you discover a security vulnerability, please **do NOT open a public issue**. Instead, report it through one of the following channels:
 
 1. **Email / 이메일**: [security@opensast.dev](mailto:security@opensast.dev)
-2. **GitHub Security Advisories**: [Report a vulnerability](https://github.com/sungalex/openSAST/security/advisories/new)
+2. **GitHub Security Advisories**: [Report a vulnerability](https://github.com/sungalex/OpenSAST/security/advisories/new)
 
 ### 신고 시 포함할 정보 / What to Include
 

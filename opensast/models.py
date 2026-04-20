@@ -1,4 +1,4 @@
-"""openSAST 핵심 도메인 모델.
+"""OpenSAST 핵심 도메인 모델.
 
 SARIF·엔진·LLM 계층 모두가 참조하는 공통 Finding 표현. SQLAlchemy ORM과 별도로
 관리하여 라이브러리 의존 없이 CLI·파이프라인 단독 사용이 가능하도록 한다.

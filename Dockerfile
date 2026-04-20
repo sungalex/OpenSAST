@@ -30,9 +30,9 @@ RUN pip install --no-cache-dir .
 # =============================================================================
 FROM python:3.12-slim AS runtime
 
-LABEL org.opencontainers.image.title="openSAST" \
+LABEL org.opencontainers.image.title="OpenSAST" \
       org.opencontainers.image.description="Multi-engine SAST orchestrator for Korea MOIS 49 security weakness items" \
-      org.opencontainers.image.source="https://github.com/sungalex/openSAST"
+      org.opencontainers.image.source="https://github.com/sungalex/OpenSAST"
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \

@@ -28,7 +28,7 @@ export default function LoginPage() {
         onSubmit={handleSubmit}
         className="bg-white shadow-md rounded-lg p-8 w-96 space-y-4"
       >
-        <h1 className="text-2xl font-bold text-brand">openSAST 로그인</h1>
+        <h1 className="text-2xl font-bold text-brand">OpenSAST 로그인</h1>
         <p className="text-sm text-slate-500">
           행안부 49개 보안약점 진단 시스템
         </p>

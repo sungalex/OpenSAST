@@ -1,6 +1,6 @@
-# Windows 에서 openSAST 실행하기 (WSL2 + Docker Desktop)
+# Windows 에서 OpenSAST 실행하기 (WSL2 + Docker Desktop)
 
-> openSAST 는 Windows 네이티브를 **공식 지원하지 않습니다**. 주요 분석 엔진
+> OpenSAST 는 Windows 네이티브를 **공식 지원하지 않습니다**. 주요 분석 엔진
 > (Semgrep/Opengrep)이 Windows 용 wheel 을 제공하지 않고, WeasyPrint 가
 > GTK3 런타임을 요구하는 등 네이티브 설치가 복잡하기 때문입니다.
 >
@@ -84,13 +84,13 @@ sudo apt install -y python3.12-venv python3-pip \
 
 ---
 
-## 5. openSAST 클론 + 실행
+## 5. OpenSAST 클론 + 실행
 
 ```bash
 # 홈 디렉터리에 클론 (WSL 파일시스템을 사용하세요 — /mnt/c 는 매우 느림)
 cd ~
-git clone https://github.com/sungalex/openSAST.git
-cd openSAST
+git clone https://github.com/sungalex/OpenSAST.git
+cd OpenSAST
 
 # 환경변수 템플릿 복사
 cp .env.example .env
@@ -110,7 +110,7 @@ docker compose up -d --build
 
 ### 6.1 파일시스템 성능
 
-**필수**: 프로젝트를 **WSL 파일시스템**(`~/openSAST`) 에 두세요. `/mnt/c/Users/...`
+**필수**: 프로젝트를 **WSL 파일시스템**(`~/OpenSAST`) 에 두세요. `/mnt/c/Users/...`
 경로는 Windows 드라이브를 9P 프로토콜로 마운트한 것이라 파일 I/O 가
 10~50배 느립니다.
 
@@ -148,7 +148,7 @@ git config --global core.autocrlf input
 또는 프로젝트 로컬:
 
 ```bash
-cd ~/openSAST
+cd ~/OpenSAST
 git config core.autocrlf false
 git add --renormalize .
 ```

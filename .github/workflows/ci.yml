@@ -220,7 +220,7 @@ jobs:
           data = json.load(open('self-scan.json'))
           high = sum(1 for f in data['findings'] if f['severity'] == 'HIGH')
           print(f'HIGH findings: {high}')
-          assert high == 0, 'openSAST 내부에서 HIGH 심각도 탐지됨 — PR 병합 전 해결 필요'
+          assert high == 0, 'OpenSAST 내부에서 HIGH 심각도 탐지됨 — PR 병합 전 해결 필요'
           "
       - name: Upload SARIF
         if: always()

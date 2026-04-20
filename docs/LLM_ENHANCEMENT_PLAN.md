@@ -226,5 +226,5 @@
 
 ---
 
-**작성자**: openSAST 코어 팀 (Claude Code 협업)
+**작성자**: OpenSAST 코어 팀 (Claude Code 협업)
 **다음 리뷰**: Phase 1 완료 시점 (예상 2026-04-27) — KPI 베이스라인 측정 결과 반영

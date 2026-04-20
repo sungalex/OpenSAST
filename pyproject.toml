@@ -9,7 +9,7 @@ description = "Open-source multi-engine SAST orchestrator covering Korea MOIS 49
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "Apache-2.0" }
-authors = [{ name = "openSAST contributors" }]
+authors = [{ name = "OpenSAST contributors" }]
 keywords = [
     "sast",
     "static-analysis",
@@ -109,11 +109,11 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/sungalex/openSAST"
-Documentation = "https://github.com/sungalex/openSAST/blob/main/docs/USER_GUIDE.md"
-Architecture = "https://github.com/sungalex/openSAST/blob/main/docs/ARCHITECTURE.md"
-Issues = "https://github.com/sungalex/openSAST/issues"
-Repository = "https://github.com/sungalex/openSAST"
+Homepage = "https://github.com/sungalex/OpenSAST"
+Documentation = "https://github.com/sungalex/OpenSAST/blob/main/docs/USER_GUIDE.md"
+Architecture = "https://github.com/sungalex/OpenSAST/blob/main/docs/ARCHITECTURE.md"
+Issues = "https://github.com/sungalex/OpenSAST/issues"
+Repository = "https://github.com/sungalex/OpenSAST"
 
 [project.scripts]
 opensast = "opensast.cli:app"

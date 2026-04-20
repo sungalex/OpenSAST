@@ -50,7 +50,7 @@ Thumbs.db
 # Claude Code local settings
 .claude/
 
-# openSAST work dir (scan extractions, temp data)
+# OpenSAST work dir (scan extractions, temp data)
 .opensast-work/
 var/opensast-work/
 

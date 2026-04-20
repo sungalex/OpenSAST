@@ -1,6 +1,6 @@
-# openSAST 아키텍처
+# OpenSAST 아키텍처
 
-> 본 문서는 openSAST 의 **애플리케이션 / 데이터 / 보안** 3개 관점에서 설계
+> 본 문서는 OpenSAST 의 **애플리케이션 / 데이터 / 보안** 3개 관점에서 설계
 > 원칙과 구현 상세를 기술한다. 안정성·확장성·유지보수성·편의성을 극대화하기
 > 위해 다음 4가지 설계 목표를 따른다.
 >
@@ -263,7 +263,7 @@ hook_registry.register("jira-sync", JiraIssueHook)
 
 ## 5. 커스터마이징 격리
 
-사용자가 openSAST 를 포크하지 않고 커스터마이징할 수 있는 6가지 확장 지점:
+사용자가 OpenSAST 를 포크하지 않고 커스터마이징할 수 있는 6가지 확장 지점:
 
 ### 5.1 커스텀 룰 디렉터리
 
@@ -295,7 +295,7 @@ my-opensast-plugin/
 └── my_aisast_plugin/__init__.py
 ```
 
-`pip install my-opensast-plugin` 만으로 openSAST 가 해당 엔진을 자동 발견.
+`pip install my-opensast-plugin` 만으로 OpenSAST 가 해당 엔진을 자동 발견.
 
 ### 5.4 훅 구독
 

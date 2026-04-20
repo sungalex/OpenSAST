@@ -1,4 +1,4 @@
-"""openSAST CLI.
+"""OpenSAST CLI.
 
 예시:
   $ opensast scan ./my-project --no-second-pass --no-triage
@@ -29,7 +29,7 @@ from opensast.sarif.normalize import findings_to_sarif
 from opensast.utils.paths import safe_write_text
 
 app = typer.Typer(
-    help="openSAST — 행안부 49개 구현단계 보안약점 진단 도구",
+    help="OpenSAST — 행안부 49개 구현단계 보안약점 진단 도구",
     no_args_is_help=True,
 )
 console = Console()
@@ -54,7 +54,7 @@ def scan(
 ) -> None:
     """디렉터리를 스캔하고 SARIF 결과를 저장한다."""
 
-    console.print(f"[bold green]openSAST scanning[/] {path}")
+    console.print(f"[bold green]OpenSAST scanning[/] {path}")
     options = ScanOptions(
         enable_second_pass=second_pass,
         enable_triage=triage,

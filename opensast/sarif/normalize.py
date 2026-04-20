@@ -135,7 +135,7 @@ def findings_to_sarif(
                     "driver": {
                         "name": tool_name,
                         "version": "0.1.0",
-                        "informationUri": "https://github.com/sungalex/openSAST",
+                        "informationUri": "https://github.com/sungalex/OpenSAST",
                         "rules": list(rules_by_id.values()),
                     }
                 },

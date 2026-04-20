@@ -10,7 +10,7 @@ describe("LoginPage", () => {
     logout();
     renderWithRouter(<LoginPage />);
     expect(
-      screen.getByRole("heading", { name: /openSAST 로그인/i })
+      screen.getByRole("heading", { name: /OpenSAST 로그인/i })
     ).toBeInTheDocument();
     const email = screen.getByLabelText(/이메일/i) as HTMLInputElement;
     expect(email.value).toBe("admin@opensast.local");

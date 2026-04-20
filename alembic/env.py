@@ -1,6 +1,6 @@
 """Alembic 마이그레이션 환경.
 
-openSAST 는 `opensast.config.get_settings()` 로부터 DB URL 과 메타데이터를 가져온다.
+OpenSAST 는 `opensast.config.get_settings()` 로부터 DB URL 과 메타데이터를 가져온다.
 마이그레이션 CLI:
 
     alembic upgrade head          # 최신 리비전까지 적용
@@ -25,7 +25,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# openSAST 설정에서 DB URL 주입
+# OpenSAST 설정에서 DB URL 주입
 _settings = get_settings()
 config.set_main_option("sqlalchemy.url", _settings.database_url)
 
