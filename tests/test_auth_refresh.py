@@ -68,8 +68,8 @@ class TestRefreshEndpoint:
         assert "access_token" in data
         # refresh token은 Set-Cookie로 전달
         cookies = resp.cookies
-        assert "aisast_refresh" in cookies or any(
-            "aisast_refresh" in h for h in resp.headers.get_list("set-cookie")
+        assert "opensast_refresh" in cookies or any(
+            "opensast_refresh" in h for h in resp.headers.get_list("set-cookie")
         )
 
     def test_logout_clears_refresh_cookie(self, client, admin_token):

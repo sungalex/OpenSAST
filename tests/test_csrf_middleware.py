@@ -13,7 +13,7 @@ class TestCSRFMiddleware:
         """CSRF 쿠키/헤더 이름 상수 확인."""
         from opensast.api.middleware.csrf import _COOKIE_NAME, _HEADER_NAME
 
-        assert _COOKIE_NAME == "aisast_csrf"
+        assert _COOKIE_NAME == "opensast_csrf"
         assert _HEADER_NAME == "x-csrf-token"
 
     def test_exempt_paths(self):
