@@ -21,6 +21,11 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    volumes:
+      # redis:7-alpine 이 VOLUME /data 를 선언하므로 named volume 을 명시하지
+      # 않으면 compose up 마다 UUID 익명 볼륨이 새로 생성된다. 고정 이름으로
+      # 묶어 잔재를 방지한다.
+      - opensast-redis:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -95,6 +100,7 @@ services:
 
 volumes:
   opensast-postgres:
+  opensast-redis:
   opensast-ollama:
   # 파일 스토리지(`./.opensast-work`)는 호스트 프로젝트 폴더를 api·worker 에
   # bind-mount 로 공유하므로 named volume 선언이 필요 없다. 프로젝트 폴더 삭제
