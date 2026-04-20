@@ -7,7 +7,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from aisast.api.middleware import install as install_middleware
 from aisast.api.middleware.prometheus import metrics_response
@@ -52,10 +55,34 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title=settings.app_name,
         version="0.5.0",
         description="행안부 49개 구현단계 보안약점 진단 API",
-        docs_url="/docs" if settings.enable_docs else None,
-        redoc_url="/redoc" if settings.enable_docs else None,
+        docs_url=None,   # 기본 docs 비활성 → 커스텀으로 대체
+        redoc_url=None,
         openapi_url="/openapi.json" if settings.enable_docs else None,
     )
+
+    # Swagger UI 정적 파일 — CDN 의존 제거 (폐쇄망 지원)
+    static_dir = Path(settings.project_root) / "static"
+    if static_dir.is_dir():
+        app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+    if settings.enable_docs:
+        from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
+
+        @app.get("/docs", include_in_schema=False)
+        async def swagger_ui():
+            return get_swagger_ui_html(
+                openapi_url="/openapi.json",
+                title=f"{settings.app_name} - Swagger UI",
+                swagger_js_url="/static/swagger-ui-bundle.js",
+                swagger_css_url="/static/swagger-ui.css",
+            )
+
+        @app.get("/redoc", include_in_schema=False)
+        async def redoc():
+            return get_redoc_html(
+                openapi_url="/openapi.json",
+                title=f"{settings.app_name} - ReDoc",
+            )
 
     install_middleware(app, settings)
 

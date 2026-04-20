@@ -63,6 +63,7 @@ WORKDIR /app
 COPY --from=builder /build/aisast ./aisast
 COPY --from=builder /build/rules ./rules
 COPY --from=builder /build/pyproject.toml /build/README.md ./
+COPY static ./static
 
 # Create non-root user
 RUN useradd -r -u 10001 -m aisast \

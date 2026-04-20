@@ -24,6 +24,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.enforce_https = enforce_https
 
+    # Swagger UI / ReDoc 은 CDN 에서 JS/CSS 를 로드하므로 CSP 완화 필요
+    _DOCS_PATHS = {"/docs", "/redoc", "/openapi.json"}
+
     async def dispatch(self, request: Request, call_next):
         response: Response = await call_next(request)
         nonce = secrets.token_urlsafe(16)
@@ -36,17 +39,29 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "Permissions-Policy",
             "geolocation=(), camera=(), microphone=(), payment=()",
         )
-        response.headers.setdefault(
-            "Content-Security-Policy",
-            f"default-src 'self'; "
-            f"script-src 'self' 'nonce-{nonce}'; "
-            f"style-src 'self' 'nonce-{nonce}'; "
-            f"img-src 'self' data: https:; "
-            f"connect-src 'self' http://localhost:* https:; "
-            f"font-src 'self' data:; "
-            f"frame-ancestors 'none'; "
-            f"base-uri 'self';",
-        )
+        if request.url.path in self._DOCS_PATHS:
+            csp = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data:; "
+                "connect-src 'self'; "
+                "font-src 'self' data:; "
+                "frame-ancestors 'none'; "
+                "base-uri 'self';"
+            )
+        else:
+            csp = (
+                f"default-src 'self'; "
+                f"script-src 'self' 'nonce-{nonce}'; "
+                f"style-src 'self' 'nonce-{nonce}'; "
+                f"img-src 'self' data: https:; "
+                f"connect-src 'self' http://localhost:* https:; "
+                f"font-src 'self' data:; "
+                f"frame-ancestors 'none'; "
+                f"base-uri 'self';"
+            )
+        response.headers.setdefault("Content-Security-Policy", csp)
         if self.enforce_https:
             response.headers.setdefault(
                 "Strict-Transport-Security",
