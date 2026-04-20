@@ -42,12 +42,12 @@
 │                                                                 │
 │   Celery Workers (scan execution, clone_and_scan)               │
 └──────────────────────────┬──────────────────────────────────────┘
-                           ▼  SQL / Redis / S3
+                           ▼  SQL / Redis / FS
 ┌─────────────────────────────────────────────────────────────────┐
 │                     ③ Data Tier                                 │
 │                                                                 │
-│   Postgres           Redis            MinIO / S3        Ollama  │
-│   (primary RW)       (queue+cache)    (source storage)  (local) │
+│   Postgres           Redis            Filesystem         Ollama │
+│   (primary RW)       (queue+cache)    (.opensast-work)   (local)│
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -175,11 +175,11 @@ hook_registry.register("jira-sync", JiraIssueHook)
 
 ### 3.3 3-Tier 데이터 배포
 
-| 배포 모드 | Postgres | Redis | MinIO | Ollama |
-|----------|----------|-------|-------|--------|
-| **Local** | SQLite 파일 (`.opensast-work/opensast.db`) 또는 로컬 Postgres | 선택 | 선택 | 선택 |
-| **Docker compose** | `postgres:16-alpine` 컨테이너 + named volume | `redis:7-alpine` | `minio:latest` | `ollama:latest` |
-| **Cloud** | **관리형 Postgres** (RDS/Cloud SQL/Aurora) | 관리형 Redis (ElastiCache/Memorystore) | 관리형 오브젝트 스토어 (S3/GCS) | **Anthropic API** 또는 GPU 노드 |
+| 배포 모드 | Postgres | Redis | 파일 스토리지 | Ollama |
+|----------|----------|-------|--------------|--------|
+| **Local** | SQLite 파일 (`.opensast-work/opensast.db`) 또는 로컬 Postgres | 선택 | `<cwd>/.opensast-work` (로컬 디스크) | 선택 |
+| **Docker compose** | `postgres:16-alpine` 컨테이너 + named volume | `redis:7-alpine` | 호스트 `./.opensast-work` bind-mount | `ollama:latest` |
+| **Cloud** | **관리형 Postgres** (RDS/Cloud SQL/Aurora) | 관리형 Redis (ElastiCache/Memorystore) | PVC · NFS · CSI 등 공유 볼륨 (v1.0 검토) | **Anthropic API** 또는 GPU 노드 |
 
 연결 문자열만 환경변수로 주입하면 동일 이미지가 세 모드 모두에서 동작한다.
 
@@ -195,9 +195,10 @@ hook_registry.register("jira-sync", JiraIssueHook)
 
 ### 3.5 파일·소스코드 저장
 
-- 업로드된 ZIP 과 git clone 체크아웃은 `OPENSAST_WORK_DIR` 아래 임시 디렉터리.
+- 업로드된 ZIP 과 git clone 체크아웃은 `OPENSAST_WORK_DIR` (기본 `<cwd>/.opensast-work`) 하위에 저장.
+- Docker 배포에서는 호스트의 `./.opensast-work` 가 api·worker 에 bind-mount 되어 프로젝트 폴더와 생명주기 일치. 오브젝트 스토어(MinIO/S3) 불필요.
 - 완료된 스캔 결과는 **DB 에만** 보존되며 원본 소스는 클린업된다.
-- 장기 보존이 필요한 경우 MinIO/S3 에 SARIF + 리포트를 업로드 (향후).
+- 멀티 노드 확장 시 공유 파일시스템(NFS/CSI)으로의 전환은 v1.0 에서 검토.
 
 ---
 
@@ -354,7 +355,7 @@ opensast serve --reload
 OPENSAST_PROFILE=docker docker compose up -d
 ```
 
-- 7개 서비스 (api/worker/postgres/redis/minio/ollama/frontend)
+- 6개 서비스 (api/worker/postgres/redis/ollama/frontend) + 호스트 bind-mount `./.opensast-work`
 - 이 리포지토리의 기본 구성
 - 자체 DNS 로 서비스 이름 사용
 

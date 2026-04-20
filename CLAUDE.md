@@ -26,7 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Frontend**: React + TypeScript + Tailwind CSS (Web UI, VS Code extension, CLI)
 - **API Gateway**: FastAPI with RBAC authentication
 - **Orchestrator**: Celery + Redis for analysis engine workers
-- **Data**: PostgreSQL (results), Redis (cache/queue), MinIO (source storage)
+- **Data**: PostgreSQL (results), Redis (cache/queue), local filesystem (`.opensast-work/` source storage)
 - **LLM**: Ollama + Gemma (offline), Claude API (online)
 
 ## Tech Stack
@@ -37,7 +37,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Analysis Engines | Opengrep, CodeQL, SpotBugs, Bandit, ESLint, gosec |
 | Frontend | React, TypeScript, Tailwind CSS |
 | Database | PostgreSQL, Redis |
-| File Storage | MinIO |
+| File Storage | Local filesystem (`.opensast-work/`, bind-mounted in Docker) |
 | AI/LLM | Ollama + Gemma (local), Claude API (cloud) |
 | Containerization | Docker, Docker Compose |
 | Reporting | SARIF, WeasyPrint (PDF), openpyxl (Excel) |

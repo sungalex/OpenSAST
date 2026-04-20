@@ -135,7 +135,6 @@ openSAST는 2-Pass 파이프라인 · 6개 엔진 통합 · MOIS 49 카탈로그
 | C2 | `Dockerfile` | `HEALTHCHECK` 지시문 없음 | 🟠 |
 | C3 | `Dockerfile` | single-stage — builder 분리 없음, 이미지 ~1GB (openjdk+cairo+build-essential 포함) | 🟡 |
 | C4 | `docker-compose.prod.yml` | TLS 기본 비활성 (443 주석 처리), secret **파일 마운트** 없음 (env 평문) | 🟠 |
-| C5 | `docker-compose.yml` | minio 기본 자격증명 `minioadmin/minioadmin` | 🟠 |
 | C6 | `deploy/nginx/nginx.conf:L77` | HSTS 헤더 주석 처리, rate limit 규칙 없음 | 🟠 |
 | C7 | 전체 | **Prometheus `/metrics` 없음** | 🟠 |
 | C8 | 전체 | **OpenTelemetry 통합 없음** (트레이싱/메트릭/로그 signal 전부 0) | 🟠 |
@@ -369,8 +368,8 @@ openSAST는 2-Pass 파이프라인 · 6개 엔진 통합 · MOIS 49 카탈로그
   - 정기 침투 테스트 결과 공개
 - **운영 매뉴얼**
   - 장애 대응 플레이북
-  - 백업/복구 절차 (Postgres WAL + MinIO lifecycle)
-  - 시크릿 로테이션 가이드 (JWT key, DB password, minio credentials)
+  - 백업/복구 절차 (Postgres WAL + `.opensast-work/` 스냅샷)
+  - 시크릿 로테이션 가이드 (JWT key, DB password)
   - 버전 업그레이드 절차
 - **부하 테스트** (k6 / Locust)
   - 100만 Finding, 1000 동시 사용자, 10분 유지

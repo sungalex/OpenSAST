@@ -83,7 +83,7 @@ pip install -e '.[dev]'
 - `anthropic`, `httpx`
 - `jinja2`, `openpyxl`, `weasyprint`
 - `python-jose[cryptography]`, `bcrypt>=4.1`
-- `minio`, `python-multipart`
+- `python-multipart`
 
 ### 2.2 Docker Compose (전체 스택)
 
@@ -101,8 +101,11 @@ docker compose up --build
 | `frontend` | 8080 | React + Vite 개발 서버 |
 | `postgres` | 5432 | 결과 영구 저장소 |
 | `redis` | 6379 | Celery 브로커 + 캐시 + 분산 rate limit |
-| `minio` | 9000 / 9001 | 소스·리포트 오브젝트 스토어 |
 | `ollama` | 11434 | 로컬 LLM(Gemma 등) |
+
+스캔 업로드/소스 트리는 프로젝트 루트의 `.opensast-work/` 를 api·worker 가
+bind-mount 로 공유한다(오브젝트 스토어 불필요). 프로젝트 폴더를 삭제하면
+스토리지도 함께 제거되어 생명주기가 일치한다.
 
 > **v0.5.0**: Dockerfile이 multi-stage 빌드로 전환되었고, non-root 사용자(`opensast`)
 > 로 실행되며, `HEALTHCHECK`가 내장되어 있다.
@@ -132,7 +135,7 @@ API 서버가 처음 기동되면 `ensure_bootstrap_admin()`이 자동으로 관
 |------|--------|------|
 | `OPENSAST_DEBUG` | `false` | 디버그 모드 |
 | `OPENSAST_RULES_DIR` | `<repo>/rules` | 룰 디렉터리 루트 |
-| `OPENSAST_WORK_DIR` | `<repo>/.opensast-work` | 임시 작업 디렉터리 |
+| `OPENSAST_WORK_DIR` | `<cwd>/.opensast-work` | 업로드 소스 · git clone 트리를 저장하는 파일 스토리지. CWD(프로젝트 루트) 하위 숨김 폴더 — 프로젝트 삭제 시 함께 제거 |
 
 ### 3.2 데이터베이스 / 큐
 
@@ -143,17 +146,7 @@ API 서버가 처음 기동되면 `ensure_bootstrap_admin()`이 자동으로 관
 | `OPENSAST_CELERY_BROKER_URL` | `redis://localhost:6379/1` |
 | `OPENSAST_CELERY_RESULT_BACKEND` | `redis://localhost:6379/2` |
 
-### 3.3 MinIO
-
-| 변수 | 기본값 |
-|------|--------|
-| `OPENSAST_MINIO_ENDPOINT` | `localhost:9000` |
-| `OPENSAST_MINIO_ACCESS_KEY` | `minioadmin` |
-| `OPENSAST_MINIO_SECRET_KEY` | `minioadmin` |
-| `OPENSAST_MINIO_BUCKET` | `opensast-sources` |
-| `OPENSAST_MINIO_SECURE` | `false` |
-
-### 3.4 인증 · 부트스트랩 관리자
+### 3.3 인증 · 부트스트랩 관리자
 
 | 변수 | 기본값 |
 |------|--------|
@@ -167,7 +160,7 @@ API 서버가 처음 기동되면 `ensure_bootstrap_admin()`이 자동으로 관
 > `POST /api/auth/refresh`로 refresh token 갱신을 지원한다. cloud 프로파일에서는
 > CSRF 미들웨어가 자동 활성화되며, rate limit이 Redis 기반 분산 방식으로 동작한다.
 
-### 3.5 LLM
+### 3.4 LLM
 
 | 변수 | 기본값 | 설명 |
 |------|--------|------|
@@ -180,7 +173,7 @@ API 서버가 처음 기동되면 `ensure_bootstrap_admin()`이 자동으로 관
 | `OPENSAST_LLM_CONTEXT_WINDOW_LINES` | `20` | 탐지 지점 ±N줄 컨텍스트 |
 | `OPENSAST_LLM_DEFAULT_FP_PROBABILITY` | `50` | LLM 호출 실패/파싱 오류 시 기본 오탐 확률(0-100) |
 
-### 3.6 관측성
+### 3.5 관측성
 
 | 변수 | 기본값 | 설명 |
 |------|--------|------|
@@ -188,7 +181,7 @@ API 서버가 처음 기동되면 `ensure_bootstrap_admin()`이 자동으로 관
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | *(없음)* | OTLP 수집기 주소 (예: `http://jaeger:4317`) |
 | `OPENSAST_LOG_FORMAT` | `console` | 로그 형식. `json`으로 설정 시 구조화 JSON 로깅 |
 
-### 3.7 엔진 바이너리 경로
+### 3.6 엔진 바이너리 경로
 
 PATH에서 발견되지 않으면 해당 엔진은 스킵된다(에러가 아님).
 

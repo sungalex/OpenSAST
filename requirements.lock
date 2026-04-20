@@ -22,10 +22,6 @@ anyio==4.13.0
     #   httpx
     #   starlette
     #   watchfiles
-argon2-cffi==25.1.0
-    # via minio
-argon2-cffi-bindings==25.1.0
-    # via argon2-cffi
 asgiref==3.11.1
     # via opentelemetry-instrumentation-asgi
 bcrypt==5.0.0
@@ -40,7 +36,6 @@ certifi==2026.2.25
     # via
     #   httpcore
     #   httpx
-    #   minio
     #   requests
 cffi==2.0.0
     # via
@@ -133,8 +128,6 @@ markupsafe==3.0.3
     #   mako
 mdurl==0.1.2
     # via markdown-it-py
-minio==7.2.20
-    # via opensast (pyproject.toml)
 openpyxl==3.1.5
     # via opensast (pyproject.toml)
 opentelemetry-api==1.41.0
@@ -219,8 +212,6 @@ pyasn1==0.6.3
     #   rsa
 pycparser==3.0
     # via cffi
-pycryptodome==3.23.0
-    # via minio
 pydantic==2.13.2
     # via
     #   opensast (pyproject.toml)
@@ -296,7 +287,6 @@ typing-extensions==4.15.0
     #   fastapi
     #   grpcio
     #   limits
-    #   minio
     #   opentelemetry-api
     #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
@@ -316,9 +306,7 @@ tzdata==2026.1
 tzlocal==5.3.1
     # via celery
 urllib3==2.6.3
-    # via
-    #   minio
-    #   requests
+    # via requests
 uvicorn==0.44.0
     # via opensast (pyproject.toml)
 uvloop==0.22.1

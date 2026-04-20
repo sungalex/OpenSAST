@@ -41,7 +41,7 @@ docker compose up --build
 서비스:
 - API: http://localhost:8000 (`/docs` OpenAPI)
 - 프론트엔드: http://localhost:8080
-- Postgres: 5432, Redis: 6379, MinIO: 9000/9001, Ollama: 11434
+- Postgres: 5432, Redis: 6379, Ollama: 11434
 
 **최초 로그인 계정** (API 최초 기동 시 자동 생성, role=`admin`):
 

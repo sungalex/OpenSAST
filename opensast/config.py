@@ -12,7 +12,6 @@ rate limit 임계값 같은 보안·운영 관련 기본값만 조정된다.
 
 from __future__ import annotations
 
-import tempfile
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
@@ -24,11 +23,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_RULES_DIR = PROJECT_ROOT / "rules"
 DEFAULT_RESOURCES_DIR = PROJECT_ROOT / "opensast" / "resources"
 
-# 작업 디렉터리 기본값 — OS 독립적으로 tempfile.gettempdir() 을 사용한다.
-# Linux: /tmp/opensast-work, macOS: /var/folders/.../opensast-work,
-# Windows: %LOCALAPPDATA%/Temp/opensast-work (WSL2 는 Linux 처리)
-# Docker 환경에서는 compose 가 OPENSAST_WORK_DIR=/var/opensast-work 를 명시 주입한다.
-DEFAULT_WORK_DIR = Path(tempfile.gettempdir()) / "opensast-work"
+# 작업·스토리지 디렉터리 기본값 — 프로세스 CWD 기준 프로젝트 폴더 하위로 고정한다.
+# OS 임시 디렉터리(/tmp 등)는 재부팅·OS 클린업 시 소실될 수 있어 프로젝트 생명주기
+# 와 동기화하기 위해 `<cwd>/.opensast-work` 를 기본으로 사용. Docker 환경에서는
+# compose 가 OPENSAST_WORK_DIR=/var/opensast-work 를 명시 주입하고, 호스트의
+# `./.opensast-work` 를 bind-mount 해 프로젝트 폴더와 생명주기를 일치시킨다.
+DEFAULT_WORK_DIR = Path.cwd() / ".opensast-work"
 
 
 class Profile(str, Enum):
@@ -101,13 +101,6 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"
-
-    # ---- MinIO ----------------------------------------------------------
-    minio_endpoint: str = "localhost:9000"
-    minio_access_key: str = "minioadmin"
-    minio_secret_key: str = "minioadmin"
-    minio_bucket: str = "opensast-sources"
-    minio_secure: bool = False
 
     # ---- Auth ----------------------------------------------------------
     secret_key: str = "change-me-in-production-please-32-chars-min"
