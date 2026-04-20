@@ -18,6 +18,7 @@ from aisast.api.routes import (
     findings,
     gate,
     mois,
+    organizations,
     projects,
     reports,
     rule_sets,
@@ -117,6 +118,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return metrics_response()
 
     app.include_router(auth.router)
+    app.include_router(organizations.router)
     app.include_router(projects.router)
     app.include_router(scans.router)
     app.include_router(findings.router)

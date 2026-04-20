@@ -38,4 +38,10 @@ class AnthropicClient(LLMClient):
         text = "\n".join(chunks).strip()
         if not text:
             raise LLMError("anthropic returned empty response")
-        return LLMResponse(text=text, model=model)
+        usage = getattr(message, "usage", None)
+        return LLMResponse(
+            text=text,
+            model=model,
+            input_tokens=getattr(usage, "input_tokens", 0) if usage else 0,
+            output_tokens=getattr(usage, "output_tokens", 0) if usage else 0,
+        )

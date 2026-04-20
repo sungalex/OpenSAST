@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from aisast.api.deps import get_db, require_role
+from aisast.api.deps import get_current_user, get_db, require_role
+from aisast.config import get_settings as _get_settings
 from aisast.api.schemas import LoginRequest, TokenResponse, UserCreate, UserOut
 from aisast.api.security import (
     PasswordPolicyError,
@@ -14,7 +18,9 @@ from aisast.api.security import (
     create_refresh_token,
     decode_access_token,
     hash_password,
+    is_refresh_consumed,
     is_user_locked,
+    mark_refresh_consumed,
     register_failed_login,
     validate_password_policy,
     verify_password,
@@ -91,7 +97,7 @@ def login(
         )
 
     clear_login_failures(user)
-    token = create_access_token(user.email, user.role)
+    token = create_access_token(user.email, user.role, org_id=user.organization_id)
     refresh = create_refresh_token(user.email)
     repo.record_audit(
         db,
@@ -102,24 +108,92 @@ def login(
         ip=ip,
     )
     db.commit()
-    return TokenResponse(access_token=token, refresh_token=refresh, role=user.role)
+    response = JSONResponse(content={
+        "access_token": token,
+        "role": user.role,
+        "token_type": "bearer",
+    })
+    _settings = _get_settings()
+    response.set_cookie(
+        key=_settings.refresh_cookie_name,
+        value=refresh,
+        httponly=True,
+        secure=_settings.refresh_cookie_secure,
+        samesite=_settings.refresh_cookie_samesite,
+        max_age=_settings.refresh_token_expire_days * 86400,
+        path="/api/auth",
+    )
+    return response
 
 
 @router.post("/refresh", response_model=TokenResponse)
-def refresh_token(request: Request, db: Session = Depends(get_db)) -> TokenResponse:
-    auth_header = request.headers.get("authorization", "")
-    if not auth_header.startswith("Bearer "):
+def refresh_token(request: Request, db: Session = Depends(get_db)):
+    _settings = _get_settings()
+    # cookie 우선, 헤더 폴백
+    token = request.cookies.get(_settings.refresh_cookie_name)
+    if not token:
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+    if not token:
         raise HTTPException(status_code=401, detail="missing refresh token")
-    token = auth_header[7:]
     payload = decode_access_token(token)
     if payload is None or payload.get("type") != "refresh":
         raise HTTPException(status_code=401, detail="invalid refresh token")
+    old_jti = payload.get("jti")
+    if old_jti and is_refresh_consumed(old_jti):
+        raise HTTPException(status_code=401, detail="refresh token already used")
+    if old_jti:
+        mark_refresh_consumed(old_jti)
     user = db.query(models.User).filter_by(email=payload["sub"]).first()
     if user is None or not user.is_active:
         raise HTTPException(status_code=401, detail="user not found or inactive")
-    new_access = create_access_token(user.email, user.role)
+    new_access = create_access_token(user.email, user.role, org_id=user.organization_id)
     new_refresh = create_refresh_token(user.email)
-    return TokenResponse(access_token=new_access, refresh_token=new_refresh, role=user.role)
+    response = JSONResponse(content={
+        "access_token": new_access,
+        "role": user.role,
+        "token_type": "bearer",
+    })
+    response.set_cookie(
+        key=_settings.refresh_cookie_name,
+        value=new_refresh,
+        httponly=True,
+        secure=_settings.refresh_cookie_secure,
+        samesite=_settings.refresh_cookie_samesite,
+        max_age=_settings.refresh_token_expire_days * 86400,
+        path="/api/auth",
+    )
+    return response
+
+
+@router.post("/logout")
+def logout(
+    request: Request,
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from aisast.api.security import blacklist_token, decode_access_token as _decode
+
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+        payload = _decode(token)
+        if payload and "jti" in payload:
+            exp = payload.get("exp", 0)
+            remaining = max(int(exp - datetime.now(timezone.utc).timestamp()), 0)
+            blacklist_token(payload["jti"], ttl_seconds=remaining)
+    _settings = _get_settings()
+    response = JSONResponse(content={"detail": "logged out"})
+    response.delete_cookie(_settings.refresh_cookie_name, path="/api/auth")
+    repo.record_audit(
+        db,
+        user_id=user.id,
+        action="auth.logout",
+        ip=request.client.host if request.client else None,
+    )
+    db.commit()
+    return response
 
 
 @router.post(

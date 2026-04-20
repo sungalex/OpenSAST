@@ -117,6 +117,12 @@ class Settings(BaseSettings):
     password_required_classes: int = 3  # upper/lower/digit/special 중 N종 이상
     failed_login_threshold: int = 5
     failed_login_lockout_minutes: int = 15
+    refresh_cookie_name: str = "aisast_refresh"
+    refresh_cookie_secure: bool = False
+    refresh_cookie_samesite: str = "Lax"
+    refresh_token_expire_days: int = 7
+    jwt_issuer: str = "aisast"
+    jwt_audience: str = "aisast-api"
 
     # 최초 부트스트랩 관리자
     bootstrap_admin_email: str = "admin@aisast.local"
@@ -143,6 +149,12 @@ class Settings(BaseSettings):
     llm_timeout_seconds: int = 60
     llm_context_window_lines: int = 20
     llm_default_fp_probability: int = 50
+
+    # ---- Celery task timeouts -----------------------------------------
+    scan_task_soft_time_limit: int = 3600
+    scan_task_time_limit: int = 7200
+    triage_task_soft_time_limit: int = 1800
+    triage_task_time_limit: int = 2400
 
     # ---- Engine binaries -----------------------------------------------
     opengrep_bin: str = "semgrep"

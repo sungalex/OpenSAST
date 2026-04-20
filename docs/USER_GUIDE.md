@@ -30,6 +30,7 @@
 19. [엔터프라이즈 기능 (이슈 워크플로 · 게이트 · 감사)](#19-엔터프라이즈-기능)
 20. [확장 / 커스터마이징 가이드](#20-확장--커스터마이징-가이드)
 21. [관측성 (Prometheus · OpenTelemetry · 구조화 로깅)](#21-관측성)
+22. [멀티테넌시 (Organization 기반 데이터 격리)](#22-멀티테넌시)
 
 ---
 
@@ -962,6 +963,19 @@ docker compose up -d frontend
 
 > 기능이 수정/추가/제거될 때마다 본 섹션과 위 상세 섹션을 **동시에** 갱신한다.
 
+### 2026-04-20 — v0.5.1
+멀티테넌시(Organization) 지원 추가.
+
+- **Organization 모델**: `organizations` 테이블 신설. slug/name/is_active 관리.
+- **organization_id FK**: users, projects, rule_sets, audit_logs 4개 테이블에
+  조직 FK 추가. 프로젝트 이름 유일성이 조직 단위로 변경(`uq_project_org_name`).
+- **서비스 계층 org scoping**: `BaseService._org_filter` 헬퍼로 자동 조직 필터.
+  project/finding/scan/rule_set/suppression/gate 서비스에 적용.
+- **JWT `org_id` 클레임**: 로그인/리프레시 토큰에 `org_id` 포함.
+- **`require_org_access` 의존성**: 역할 검증 + ActorContext 생성 통합 의존성.
+- **Organization CRUD API**: `POST/GET /api/organizations`, `GET /api/organizations/{id}`.
+- **Alembic `0003_multitenancy`**: 기존 레코드를 `default-org`(id=1)에 자동 할당.
+
 ### 2026-04-17 — v0.5.0
 관측성·보안 강화·파이프라인 견고성·DB 성능 최적화 대규모 릴리스.
 
@@ -1847,3 +1861,73 @@ readinessProbe:
   initialDelaySeconds: 5
   periodSeconds: 10
 ```
+
+---
+
+## 22. 멀티테넌시
+
+aiSAST 는 **Organization(조직)** 단위로 데이터를 격리하는 멀티테넌시 모델을 지원한다.
+하나의 aiSAST 인스턴스에서 여러 팀이나 부서가 각자의 프로젝트/룰셋/감사로그를 독립적으로
+관리할 수 있다.
+
+### 22.1 Organization 모델
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `id` | Integer (PK) | 자동 증가 ID |
+| `slug` | String(120), unique | URL-safe 식별자 (예: `security-team`) |
+| `name` | String(200) | 표시 이름 |
+| `is_active` | Boolean | 비활성화 시 소속 사용자 접근 차단 |
+
+### 22.2 조직 스코핑
+
+다음 테이블에 `organization_id` FK가 추가된다:
+
+- **users** -- 사용자가 소속된 조직
+- **projects** -- 프로젝트별 조직 귀속. 조직 내에서 프로젝트 이름 유일
+- **rule_sets** -- 조직별 체커 그룹
+- **audit_logs** -- 조직별 감사 기록
+
+서비스 계층(`BaseService._org_filter`)이 자동으로 현재 사용자의 `organization_id`에
+맞는 레코드만 반환한다. `organization_id`가 None인 컨텍스트(슈퍼 관리자 등)는 전체
+레코드를 조회할 수 있다.
+
+### 22.3 JWT 토큰
+
+로그인 시 발급되는 JWT에 `org_id` 클레임이 포함된다:
+
+```json
+{
+  "sub": "user@example.com",
+  "role": "analyst",
+  "org_id": 1,
+  "exp": 1745000000,
+  "iat": 1744900000,
+  "jti": "abc123...",
+  "type": "access",
+  "iss": "aisast",
+  "aud": "aisast"
+}
+```
+
+### 22.4 Organization CRUD API
+
+| 메서드 | 경로 | 권한 | 설명 |
+|--------|------|------|------|
+| `POST` | `/api/organizations` | admin | 조직 생성 |
+| `GET` | `/api/organizations` | 인증됨 | 조직 목록 |
+| `GET` | `/api/organizations/{org_id}` | 인증됨 | 조직 상세 |
+
+**조직 생성 예시:**
+
+```bash
+curl -X POST http://localhost:8000/api/organizations \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"slug": "security-team", "name": "Security Team"}'
+```
+
+### 22.5 Alembic 마이그레이션
+
+`0003_multitenancy` 마이그레이션이 기존 데이터를 `default-org` 조직(id=1)에 자동
+할당한다. 업그레이드 시 기존 데이터 유실 없이 멀티테넌시로 전환된다.

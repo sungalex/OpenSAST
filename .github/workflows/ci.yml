@@ -97,6 +97,16 @@ jobs:
           name: coverage-report
           path: coverage.xml
 
+      - name: Upload coverage to Codecov
+        if: matrix.mode == 'full' && runner.os == 'Linux'
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          flags: backend
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
       - name: Run mypy (non-blocking)
         if: matrix.mode == 'full'
         run: mypy aisast --ignore-missing-imports || true

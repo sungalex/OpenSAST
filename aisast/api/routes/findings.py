@@ -60,6 +60,7 @@ def search_findings(
     path_glob: str | None = Query(None),
     text: str | None = Query(None),
     include_excluded: bool = Query(False),
+    cursor: str | None = Query(None),
     limit: int = Query(200, ge=1, le=2000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -76,6 +77,7 @@ def search_findings(
         path_glob=path_glob,
         text=text,
         include_excluded=include_excluded,
+        cursor=cursor,
         limit=limit,
         offset=offset,
     )

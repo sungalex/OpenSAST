@@ -1,0 +1,40 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "opengrep",
+          "version": "1.70.0",
+          "rules": [
+            {
+              "id": "mois-sr1-3-python-xss-template",
+              "name": "XSS via template rendering",
+              "shortDescription": { "text": "SR1-3 크로스사이트 스크립트" },
+              "properties": {
+                "tags": ["security", "CWE-79", "mois-SR1-3"],
+                "cwe": "CWE-79"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "mois-sr1-3-python-xss-template",
+          "level": "error",
+          "message": { "text": "XSS detected: user input rendered directly in template without escaping" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/views.py" },
+                "region": { "startLine": 18, "startColumn": 12 }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

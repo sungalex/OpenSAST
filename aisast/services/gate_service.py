@@ -10,6 +10,20 @@ from aisast.services.base import BaseService, ServiceError
 
 
 class GateService(BaseService):
+    def _verify_project_access(self, project_id: int) -> models.Project:
+        """프로젝트 존재 + 조직 스코핑 검증."""
+        project = self.session.get(models.Project, project_id)
+        if project is None:
+            raise ServiceError(
+                "project not found", status_code=status.HTTP_404_NOT_FOUND
+            )
+        org_id = self.actor.organization_id if self.actor else None
+        if org_id is not None and project.organization_id != org_id:
+            raise ServiceError(
+                "project not found", status_code=status.HTTP_404_NOT_FOUND
+            )
+        return project
+
     def upsert_policy(
         self,
         *,
@@ -22,6 +36,7 @@ class GateService(BaseService):
         enabled: bool,
     ) -> models.GatePolicy:
         self.actor.require_role("admin")
+        self._verify_project_access(project_id)
         existing = self.session.scalar(
             select(models.GatePolicy).where(
                 models.GatePolicy.project_id == project_id
@@ -67,6 +82,7 @@ class GateService(BaseService):
         return row
 
     def get_policy(self, project_id: int) -> models.GatePolicy:
+        self._verify_project_access(project_id)
         row = self.session.scalar(
             select(models.GatePolicy).where(
                 models.GatePolicy.project_id == project_id
@@ -83,6 +99,7 @@ class GateService(BaseService):
         scan_id: str | None,
         base_scan_id: str | None,
     ) -> dict:
+        self._verify_project_access(project_id)
         policy = self.session.scalar(
             select(models.GatePolicy).where(
                 models.GatePolicy.project_id == project_id

@@ -34,7 +34,8 @@ class TestJWTEnhancements:
 
 
 class TestRefreshEndpoint:
-    def test_refresh_returns_new_tokens(self, client, admin_token):
+    def test_refresh_returns_new_tokens_via_header(self, client, admin_token):
+        """Authorization 헤더 폴백으로 refresh token 제출."""
         from aisast.api.security import create_refresh_token
 
         refresh = create_refresh_token("admin@aisast.local")
@@ -45,21 +46,37 @@ class TestRefreshEndpoint:
         assert resp.status_code == 200
         data = resp.json()
         assert "access_token" in data
-        assert "refresh_token" in data
 
     def test_refresh_rejects_access_token(self, client, admin_token):
+        """access token으로 refresh 시도 시 거부."""
+        # TestClient가 이전 login의 cookie를 가지고 있을 수 있으므로 cookie 제거
+        client.cookies.clear()
         resp = client.post(
             "/api/auth/refresh",
             headers={"Authorization": f"Bearer {admin_token}"},
         )
         assert resp.status_code == 401
 
-    def test_login_returns_refresh_token(self, client):
+    def test_login_sets_refresh_cookie(self, client):
+        """로그인 시 refresh token이 HttpOnly 쿠키로 설정."""
         resp = client.post(
             "/api/auth/login",
             json={"email": "admin@aisast.local", "password": "aisast-admin"},
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert "refresh_token" in data
-        assert data["refresh_token"] is not None
+        assert "access_token" in data
+        # refresh token은 Set-Cookie로 전달
+        cookies = resp.cookies
+        assert "aisast_refresh" in cookies or any(
+            "aisast_refresh" in h for h in resp.headers.get_list("set-cookie")
+        )
+
+    def test_logout_clears_refresh_cookie(self, client, admin_token):
+        """로그아웃 시 refresh 쿠키 삭제."""
+        resp = client.post(
+            "/api/auth/logout",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["detail"] == "logged out"

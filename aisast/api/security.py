@@ -34,7 +34,9 @@ def verify_password(plain: str, hashed: str) -> bool:
         return False
 
 
-def create_access_token(subject: str, role: str) -> str:
+def create_access_token(
+    subject: str, role: str, org_id: int | None = None
+) -> str:
     settings = get_settings()
     now = datetime.now(timezone.utc)
     expires = now + timedelta(minutes=settings.access_token_expire_minutes)
@@ -45,6 +47,9 @@ def create_access_token(subject: str, role: str) -> str:
         "iat": now,
         "jti": uuid.uuid4().hex,
         "type": "access",
+        "iss": settings.jwt_issuer,
+        "aud": settings.jwt_audience,
+        "org_id": org_id,
     }
     return jwt.encode(payload, settings.secret_key, algorithm=_ALGORITHM)
 
@@ -59,6 +64,8 @@ def create_refresh_token(subject: str) -> str:
         "iat": now,
         "jti": uuid.uuid4().hex,
         "type": "refresh",
+        "iss": settings.jwt_issuer,
+        "aud": settings.jwt_audience,
     }
     return jwt.encode(payload, settings.secret_key, algorithm=_ALGORITHM)
 
@@ -66,7 +73,13 @@ def create_refresh_token(subject: str) -> str:
 def decode_access_token(token: str) -> dict | None:
     settings = get_settings()
     try:
-        return jwt.decode(token, settings.secret_key, algorithms=[_ALGORITHM])
+        return jwt.decode(
+            token,
+            settings.secret_key,
+            algorithms=[_ALGORITHM],
+            audience=settings.jwt_audience,
+            issuer=settings.jwt_issuer,
+        )
     except JWTError:
         return None
 
@@ -157,3 +170,59 @@ def clear_login_failures(user) -> None:
     user.failed_attempts = 0
     user.locked_until = None
     user.last_login_at = datetime.now(timezone.utc)
+
+
+# ---------------------------------------------------------------------------
+# 토큰 블랙리스트 (Redis)
+# ---------------------------------------------------------------------------
+
+
+def blacklist_token(jti: str, ttl_seconds: int | None = None) -> None:
+    """JWT jti를 블랙리스트에 추가."""
+    try:
+        import redis
+
+        settings = get_settings()
+        r = redis.from_url(settings.redis_url)
+        ttl = ttl_seconds or (settings.access_token_expire_minutes * 60)
+        r.setex(f"blacklist:{jti}", max(ttl, 1), "1")
+    except Exception:
+        pass  # Redis 장애 시 fail-open
+
+
+def is_blacklisted(jti: str) -> bool:
+    """jti가 블랙리스트에 있는지 확인."""
+    try:
+        import redis
+
+        r = redis.from_url(get_settings().redis_url)
+        return r.exists(f"blacklist:{jti}") > 0
+    except Exception:
+        return False  # Redis 장애 시 fail-open
+
+
+# ---------------------------------------------------------------------------
+# Refresh token rotation
+# ---------------------------------------------------------------------------
+
+
+def mark_refresh_consumed(jti: str, ttl_seconds: int = 7 * 86400) -> None:
+    """사용된 refresh token jti를 기록."""
+    try:
+        import redis
+
+        r = redis.from_url(get_settings().redis_url)
+        r.setex(f"refresh_consumed:{jti}", ttl_seconds, "1")
+    except Exception:
+        pass
+
+
+def is_refresh_consumed(jti: str) -> bool:
+    """이미 사용된 refresh token인지 확인."""
+    try:
+        import redis
+
+        r = redis.from_url(get_settings().redis_url)
+        return r.exists(f"refresh_consumed:{jti}") > 0
+    except Exception:
+        return False

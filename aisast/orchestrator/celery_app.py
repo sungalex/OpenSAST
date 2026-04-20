@@ -63,6 +63,20 @@ def create_celery_app() -> Celery:
         worker_prefetch_multiplier=1,
         # 플랫폼에 맞는 pool 힌트 — worker 실행 시 명시하지 않으면 사용됨
         worker_pool=recommended_pool(),
+        task_annotations={
+            "aisast.run_scan": {
+                "soft_time_limit": settings.scan_task_soft_time_limit,
+                "time_limit": settings.scan_task_time_limit,
+            },
+            "aisast.clone_and_scan": {
+                "soft_time_limit": settings.scan_task_soft_time_limit,
+                "time_limit": settings.scan_task_time_limit,
+            },
+            "aisast.triage_batch": {
+                "soft_time_limit": settings.triage_task_soft_time_limit,
+                "time_limit": settings.triage_task_time_limit,
+            },
+        },
     )
     log.info("celery app initialized (pool=%s)", recommended_pool())
     return app

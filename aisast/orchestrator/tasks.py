@@ -10,6 +10,8 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+from sqlalchemy import select
+
 from aisast.config import get_settings
 from aisast.db import models, repo
 from aisast.db.session import session_scope
@@ -148,3 +150,76 @@ def clone_and_scan_task(
         "total_findings": len(result.findings),
         "engine_stats": result.engine_stats,
     }
+
+
+@celery_app.task(
+    name="aisast.triage_batch",
+    bind=True,
+    autoretry_for=(Exception,),
+    max_retries=1,
+    retry_backoff=True,
+    acks_late=True,
+)
+def triage_batch_task(
+    self,
+    scan_id: str,
+    finding_ids: list[int] | None = None,
+) -> dict:
+    """특정 스캔(또는 finding 목록)에 대해 배치 LLM triage를 실행."""
+    from aisast.llm.triage import Triager
+    from aisast.models import CodeLocation, Finding as DomainFinding
+    from aisast.mois.catalog import Severity
+
+    with session_scope() as session:
+        stmt = select(models.Finding)
+        if finding_ids:
+            stmt = stmt.where(models.Finding.id.in_(finding_ids))
+        else:
+            stmt = stmt.where(
+                models.Finding.scan_id == scan_id,
+                models.Finding.status != "excluded",
+            )
+        rows = list(session.scalars(stmt))
+
+        # DB -> 도메인 변환
+        domain_findings = []
+        for r in rows:
+            domain_findings.append(DomainFinding(
+                rule_id=r.rule_id,
+                engine=r.engine,
+                message=r.message,
+                severity=Severity(r.severity),
+                location=CodeLocation(
+                    file_path=r.file_path,
+                    start_line=r.start_line,
+                    end_line=r.end_line,
+                    snippet=r.snippet,
+                ),
+                cwe_ids=tuple(r.cwe_ids or []),
+                mois_id=r.mois_id,
+                language=r.language,
+            ))
+
+        triager = Triager()
+        triager.triage(domain_findings)
+
+        # 결과 반영
+        for dom, row in zip(domain_findings, rows):
+            if dom.triage is not None:
+                if row.triage is None:
+                    row.triage = models.TriageRecord(
+                        finding_id=row.id,
+                        verdict=dom.triage.verdict,
+                        fp_probability=dom.triage.fp_probability,
+                        rationale=dom.triage.rationale,
+                        recommended_fix=dom.triage.recommended_fix,
+                        patched_code=dom.triage.patched_code,
+                        model=dom.triage.model,
+                    )
+                else:
+                    row.triage.verdict = dom.triage.verdict
+                    row.triage.fp_probability = dom.triage.fp_probability
+                    row.triage.rationale = dom.triage.rationale
+                    row.triage.model = dom.triage.model
+
+    return {"scan_id": scan_id, "triaged": len(domain_findings)}

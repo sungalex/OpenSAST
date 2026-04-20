@@ -25,6 +25,15 @@ def fixtures_dir() -> Path:
     return Path(__file__).parent / "fixtures"
 
 
+@pytest.fixture(autouse=True)
+def mock_redis_blacklist(monkeypatch):
+    """테스트에서 Redis 블랙리스트 호출을 차단."""
+    monkeypatch.setattr("aisast.api.security.is_blacklisted", lambda jti: False)
+    monkeypatch.setattr("aisast.api.security.blacklist_token", lambda jti, ttl_seconds=None: None)
+    monkeypatch.setattr("aisast.api.security.is_refresh_consumed", lambda jti: False)
+    monkeypatch.setattr("aisast.api.security.mark_refresh_consumed", lambda jti, ttl_seconds=7*86400: None)
+
+
 # ---------------------------------------------------------------------------
 # DB / app 픽스처
 # ---------------------------------------------------------------------------
@@ -79,15 +88,23 @@ def client(db_engine, monkeypatch) -> Iterator[TestClient]:
     monkeypatch.setattr(
         task_mod.clone_and_scan_task, "delay", MagicMock(return_value=None)
     )
+    monkeypatch.setattr(
+        task_mod.triage_batch_task, "delay", MagicMock(return_value=None)
+    )
 
     # LLM 강제 noop
     monkeypatch.setenv("AISAST_LLM_PROVIDER", "noop")
 
     # API 모듈 import 후 의존성 오버라이드
-    from aisast.api.app import create_app
     from aisast.api.deps import get_db
     from aisast.db import repo
     from aisast.db.session import session_scope
+
+    # startup 에서 PostgreSQL 연결 시도를 차단 — 테스트 엔진 재사용
+    monkeypatch.setattr("aisast.api.app.init_engine", lambda s: db_engine)
+    monkeypatch.setattr("aisast.api.app.auto_migrate", lambda e: None)
+
+    from aisast.api.app import create_app
 
     app = create_app()
 

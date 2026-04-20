@@ -64,6 +64,7 @@ def create_project(
     repo_url: str = "",
     default_language: str | None = None,
     owner_id: int | None = None,
+    organization_id: int | None = None,
 ) -> models.Project:
     project = models.Project(
         name=name,
@@ -71,6 +72,7 @@ def create_project(
         repo_url=repo_url,
         default_language=default_language,
         owner_id=owner_id,
+        organization_id=organization_id,
     )
     session.add(project)
     session.flush()

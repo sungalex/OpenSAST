@@ -166,9 +166,16 @@ class ScanService(BaseService):
         scan = self.session.get(models.Scan, scan_id)
         if scan is None:
             raise ServiceError("scan not found", status_code=status.HTTP_404_NOT_FOUND)
+        # 조직 스코핑: scan 이 속한 project 의 org_id 검증
+        org_id = self.actor.organization_id if self.actor else None
+        if org_id is not None:
+            project = self.session.get(models.Project, scan.project_id)
+            if project is None or project.organization_id != org_id:
+                raise ServiceError("scan not found", status_code=status.HTTP_404_NOT_FOUND)
         return scan
 
     def list_for_project(self, project_id: int) -> list[models.Scan]:
+        # project 접근 검증은 라우트에서 ProjectService.get 으로 수행
         return repo.list_scans_for_project(self.session, project_id)
 
     # ---- diff --------------------------------------------------------

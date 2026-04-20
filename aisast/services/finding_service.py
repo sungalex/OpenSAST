@@ -56,6 +56,7 @@ class FindingService(BaseService):
         path_glob: str | None = None,
         text: str | None = None,
         include_excluded: bool = False,
+        cursor: str | None = None,
         limit: int = 200,
         offset: int = 0,
     ) -> list[models.Finding]:
@@ -68,9 +69,15 @@ class FindingService(BaseService):
         filters = []
         if scan_id:
             filters.append(models.Finding.scan_id == scan_id)
-        if project_id is not None:
+        # org scoping: project_id 가 지정되지 않아도 조직 필터 적용
+        org_id = self.actor.organization_id if self.actor else None
+        if project_id is not None or org_id is not None:
             stmt = stmt.join(models.Scan)
-            filters.append(models.Scan.project_id == project_id)
+            if project_id is not None:
+                filters.append(models.Scan.project_id == project_id)
+            if org_id is not None:
+                stmt = stmt.join(models.Project)
+                filters.append(models.Project.organization_id == org_id)
         if severity:
             filters.append(
                 models.Finding.severity.in_([s.upper() for s in severity])
@@ -92,6 +99,28 @@ class FindingService(BaseService):
                     models.Finding.file_path.ilike(like),
                 )
             )
+        if cursor:
+            import base64
+            import json as _json
+
+            try:
+                decoded = _json.loads(base64.b64decode(cursor))
+                stmt = stmt.where(
+                    or_(
+                        models.Finding.severity > decoded["severity"],
+                        and_(
+                            models.Finding.severity == decoded["severity"],
+                            models.Finding.created_at < decoded["created_at"],
+                        ),
+                        and_(
+                            models.Finding.severity == decoded["severity"],
+                            models.Finding.created_at == decoded["created_at"],
+                            models.Finding.id > decoded["id"],
+                        ),
+                    )
+                )
+            except Exception:
+                pass  # 잘못된 cursor는 무시, 첫 페이지로 폴백
         if filters:
             stmt = stmt.where(and_(*filters))
         stmt = (

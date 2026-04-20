@@ -25,6 +25,7 @@ class ProjectService(BaseService):
             raise ServiceError(
                 "project name already used", status_code=status.HTTP_409_CONFLICT
             )
+        org_id = self.actor.organization_id if self.actor else None
         project = repo.create_project(
             self.session,
             name=name,
@@ -32,6 +33,7 @@ class ProjectService(BaseService):
             repo_url=repo_url,
             default_language=default_language,
             owner_id=self.actor.user_id,
+            organization_id=org_id,
         )
         self._audit(
             "project.create",
@@ -44,10 +46,14 @@ class ProjectService(BaseService):
         return project
 
     def list_all(self) -> list[models.Project]:
-        return repo.list_projects(self.session)
+        stmt = select(models.Project).where(self._org_filter(models.Project))
+        return list(self.session.scalars(stmt.order_by(models.Project.id.desc())))
 
     def get(self, project_id: int) -> models.Project:
         project = self.session.get(models.Project, project_id)
         if project is None:
+            raise ServiceError("project not found", status_code=status.HTTP_404_NOT_FOUND)
+        org_id = self.actor.organization_id if self.actor else None
+        if org_id is not None and project.organization_id != org_id:
             raise ServiceError("project not found", status_code=status.HTTP_404_NOT_FOUND)
         return project

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import json as _json
 from datetime import datetime
 from typing import Any
 
@@ -307,3 +309,9 @@ class ScanDiffOut(BaseModel):
     resolved: list[FindingOut]
     persistent: int
     summary: dict[str, int]
+
+
+class CursorPage(BaseModel):
+    items: list[dict]
+    next_cursor: str | None = None
+    has_more: bool = False

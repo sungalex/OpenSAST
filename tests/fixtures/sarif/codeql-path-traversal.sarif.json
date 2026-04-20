@@ -1,0 +1,40 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "codeql",
+          "version": "2.16.0",
+          "rules": [
+            {
+              "id": "py/path-injection",
+              "name": "Uncontrolled data used in path expression",
+              "shortDescription": { "text": "SR1-6 경로 조작" },
+              "properties": {
+                "tags": ["security", "CWE-22", "mois-SR1-6"],
+                "cwe": "CWE-22"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "py/path-injection",
+          "level": "error",
+          "message": { "text": "This path depends on a user-provided value without validation" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/file_handler.py" },
+                "region": { "startLine": 31, "startColumn": 14 }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

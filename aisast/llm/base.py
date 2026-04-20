@@ -14,6 +14,8 @@ class LLMError(RuntimeError):
 class LLMResponse:
     text: str
     model: str
+    input_tokens: int = 0
+    output_tokens: int = 0
 
 
 class LLMClient(abc.ABC):

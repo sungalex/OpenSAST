@@ -1,0 +1,40 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "eslint",
+          "version": "8.57.0",
+          "rules": [
+            {
+              "id": "no-unsanitized/property",
+              "name": "DOM XSS via innerHTML",
+              "shortDescription": { "text": "SR1-3 DOM 기반 크로스사이트 스크립트" },
+              "properties": {
+                "tags": ["security", "CWE-79", "mois-SR1-3"],
+                "cwe": "CWE-79"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "no-unsanitized/property",
+          "level": "error",
+          "message": { "text": "Unsafe assignment to innerHTML: user-controlled data flows into DOM property" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/components/SearchResult.js" },
+                "region": { "startLine": 24, "startColumn": 9 }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

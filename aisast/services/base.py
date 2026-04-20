@@ -36,6 +36,7 @@ class ActorContext:
     user: models.User | None
     ip: str | None = None
     user_agent: str | None = None
+    organization_id: int | None = None
 
     @property
     def user_id(self) -> int | None:
@@ -65,6 +66,17 @@ class BaseService:
     def __init__(self, session: Session, actor: ActorContext | None = None) -> None:
         self.session = session
         self.actor = actor or ActorContext(user=None)
+
+    def _org_filter(self, model_class):
+        """조직 스코핑 필터.
+
+        actor 에 organization_id 가 설정되어 있으면 해당 조직의 레코드만 반환,
+        None 이면 전체 반환 (super-admin / 미인증 컨텍스트).
+        """
+        org_id = self.actor.organization_id if self.actor else None
+        if org_id is None:
+            return True
+        return model_class.organization_id == org_id
 
     def _audit(
         self,

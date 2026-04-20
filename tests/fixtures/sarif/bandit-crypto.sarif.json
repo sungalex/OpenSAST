@@ -1,0 +1,40 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "bandit",
+          "version": "1.7.8",
+          "rules": [
+            {
+              "id": "B303",
+              "name": "Use of insecure MD2, MD4, MD5, or SHA1 hash function",
+              "shortDescription": { "text": "SR2-4 약한 암호화 알고리즘 사용" },
+              "properties": {
+                "tags": ["security", "CWE-327", "mois-SR2-4"],
+                "cwe": "CWE-327"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "B303",
+          "level": "warning",
+          "message": { "text": "Use of insecure hash function: hashlib.md5()" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/crypto_utils.py" },
+                "region": { "startLine": 15, "startColumn": 10 }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

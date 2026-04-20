@@ -11,10 +11,31 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import (
+    JSON,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from aisast.db.base import Base, TimestampMixin
+
+
+class Organization(Base, TimestampMixin):
+    __tablename__ = "organizations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    slug: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+
+    users: Mapped[list["User"]] = relationship(back_populates="organization")
+    projects: Mapped[list["Project"]] = relationship(back_populates="organization")
 
 
 class User(Base, TimestampMixin):
@@ -33,13 +54,22 @@ class User(Base, TimestampMixin):
     last_login_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    organization_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id"), nullable=True
+    )
+    organization: Mapped["Organization | None"] = relationship(
+        back_populates="users"
+    )
 
 
 class Project(Base, TimestampMixin):
     __tablename__ = "projects"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "name", name="uq_project_org_name"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="")
     repo_url: Mapped[str] = mapped_column(String(500), default="")
     default_language: Mapped[str | None] = mapped_column(String(32), nullable=True)
@@ -47,7 +77,13 @@ class Project(Base, TimestampMixin):
     rule_set_id: Mapped[int | None] = mapped_column(
         ForeignKey("rule_sets.id"), nullable=True
     )
+    organization_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id"), nullable=True
+    )
 
+    organization: Mapped["Organization | None"] = relationship(
+        back_populates="projects"
+    )
     scans: Mapped[list["Scan"]] = relationship(
         back_populates="project", cascade="all,delete-orphan"
     )
@@ -129,6 +165,9 @@ class Finding(Base, TimestampMixin):
 
 class TriageRecord(Base, TimestampMixin):
     __tablename__ = "triage_records"
+    __table_args__ = (
+        Index("ix_triage_records_finding_id", "finding_id"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     finding_id: Mapped[int] = mapped_column(
@@ -161,6 +200,9 @@ class RuleSet(Base, TimestampMixin):
     exclude_rules: Mapped[list[str]] = mapped_column(JSON, default=list)
     min_severity: Mapped[str] = mapped_column(String(16), default="LOW")
     is_default: Mapped[bool] = mapped_column(default=False, nullable=False)
+    organization_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id"), nullable=True
+    )
 
 
 class SuppressionRule(Base, TimestampMixin):
@@ -213,6 +255,9 @@ class AuditLog(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    organization_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id"), nullable=True
+    )
     action: Mapped[str] = mapped_column(String(64), nullable=False)
     target_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     target_id: Mapped[str | None] = mapped_column(String(64), nullable=True)

@@ -11,7 +11,8 @@ from aisast.services.base import BaseService, ServiceError
 
 class RuleSetService(BaseService):
     def list_all(self) -> list[models.RuleSet]:
-        return list(self.session.scalars(select(models.RuleSet).order_by(models.RuleSet.id)))
+        stmt = select(models.RuleSet).where(self._org_filter(models.RuleSet))
+        return list(self.session.scalars(stmt.order_by(models.RuleSet.id)))
 
     def get(self, rule_set_id: int) -> models.RuleSet:
         row = self.session.get(models.RuleSet, rule_set_id)
@@ -42,6 +43,7 @@ class RuleSetService(BaseService):
                 select(models.RuleSet).where(models.RuleSet.is_default.is_(True))
             ):
                 existing.is_default = False
+        org_id = self.actor.organization_id if self.actor else None
         row = models.RuleSet(
             name=name,
             description=description,
@@ -50,6 +52,7 @@ class RuleSetService(BaseService):
             exclude_rules=exclude_rules,
             min_severity=min_severity.upper(),
             is_default=is_default,
+            organization_id=org_id,
         )
         self.session.add(row)
         self._audit(

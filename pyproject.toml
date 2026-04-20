@@ -131,3 +131,8 @@ select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "engine: requires engine binary (semgrep, bandit, etc.)",
+    "celery_integration: requires Redis + Celery worker",
+]
+addopts = "-m 'not engine and not celery_integration'"
