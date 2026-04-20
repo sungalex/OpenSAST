@@ -139,7 +139,7 @@ hook_registry.register("jira-sync", JiraIssueHook)
 
 | 항목 | local | docker | cloud |
 |------|-------|--------|-------|
-| `cors_origins` | `["*"]` | `["http://localhost:5173"]` | 환경변수 allowlist 강제 |
+| `cors_origins` | `["*"]` | `["http://localhost:8080"]` | 환경변수 allowlist 강제 |
 | `secret_key` 검증 | 경고 | 경고 | **기본값 거부** (32자 이상 강제) |
 | `database_url` 기본 | SQLite | Postgres(compose) | 미설정 시 오류 |
 | `rate_limit` | off | 100/min | 60/min |

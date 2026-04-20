@@ -99,7 +99,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-브라우저(Windows 호스트)에서 `http://localhost:5173` 접속 → 로그인:
+브라우저(Windows 호스트)에서 `http://localhost:8080` 접속 → 로그인:
 
 - 이메일: `admin@opensast.local`
 - 비밀번호: `opensast-admin`
@@ -117,7 +117,7 @@ docker compose up -d --build
 ### 6.2 포트 포워딩
 
 Docker Desktop 이 WSL2 포트를 자동으로 Windows 호스트에 포워딩합니다.
-`localhost:5173` 이 안 뜨면 PowerShell 에서:
+`localhost:8080` 이 안 뜨면 PowerShell 에서:
 
 ```powershell
 wsl --shutdown
@@ -178,7 +178,7 @@ VS Code 의 **WSL 확장**을 설치하면 Windows 쪽에서 편집하면서도 
 | 증상 | 해결 |
 |------|------|
 | `docker compose up` 에서 권한 거부 | `sudo usermod -aG docker $USER` 후 WSL 재시작 |
-| `localhost:5173` 무응답 | Docker Desktop Settings → Resources → WSL Integration 재확인, `wsl --shutdown` 후 Docker 재기동 |
+| `localhost:8080` 무응답 | Docker Desktop Settings → Resources → WSL Integration 재확인, `wsl --shutdown` 후 Docker 재기동 |
 | `pip install` 에서 SSL/네트워크 오류 | WSL 프록시 설정 필요: `~/.bashrc` 에 `export HTTPS_PROXY=...` |
 | `apt update` 에서 hash mismatch | `sudo rm -rf /var/lib/apt/lists/* && sudo apt update` |
 | 디스크 공간 부족 | Windows 의 WSL 가상 디스크 크기 자동 확장 — 대신 `docker system prune -af` 로 이미지 정리 |

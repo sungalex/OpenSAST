@@ -19,7 +19,7 @@ def test_docker_profile_defaults() -> None:
     s = Settings(profile=Profile.DOCKER).apply_profile_defaults()
     assert s.enable_docs is True
     assert s.rate_limit_per_minute == 100
-    assert "http://localhost:5173" in s.cors_origins
+    assert "http://localhost:8080" in s.cors_origins
 
 
 def test_cloud_profile_defaults_strict() -> None:

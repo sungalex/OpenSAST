@@ -46,7 +46,7 @@ pip install "semgrep>=1.70" "bandit[sarif]>=1.7"
 ```bash
 cd frontend
 npm install
-npm run dev   # 개발 서버 시작 (http://localhost:5173)
+npm run dev   # 개발 서버 시작 (http://localhost:8080)
 ```
 
 ### 시스템 의존성 (WeasyPrint PDF 리포트용)

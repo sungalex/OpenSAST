@@ -12,6 +12,6 @@ RUN npm install --no-fund --no-audit --loglevel=info
 
 COPY . .
 
-EXPOSE 5173
+EXPOSE 8080
 
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173", "--strictPort"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "8080", "--strictPort"]
