@@ -44,7 +44,7 @@ def test_registry_get_raises_for_unknown() -> None:
 
 
 def test_registry_disabled_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AISAST_PLUGINS_DISABLED", "foo,bar")
+    monkeypatch.setenv("OPENSAST_PLUGINS_DISABLED", "foo,bar")
     from opensast.plugins.registry import _disabled_plugins
 
     assert _disabled_plugins() == {"foo", "bar"}

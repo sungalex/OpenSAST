@@ -49,7 +49,7 @@ docker compose up --build
 |--------|----------|
 | `admin@aisast.local` | `aisast-admin` |
 
-운영 환경에서는 `AISAST_BOOTSTRAP_ADMIN_EMAIL`, `AISAST_BOOTSTRAP_ADMIN_PASSWORD`
+운영 환경에서는 `OPENSAST_BOOTSTRAP_ADMIN_EMAIL`, `OPENSAST_BOOTSTRAP_ADMIN_PASSWORD`
 환경변수로 반드시 변경한 뒤 기동하세요. 동일 이메일의 계정이 이미 존재하면
 부트스트랩 로직은 건너뜁니다.
 

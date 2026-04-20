@@ -54,16 +54,16 @@ services:
       redis:
         condition: service_healthy
     environment:
-      AISAST_DATABASE_URL: postgresql+psycopg2://aisast:aisast@postgres:5432/aisast
-      AISAST_REDIS_URL: redis://redis:6379/0
-      AISAST_CELERY_BROKER_URL: redis://redis:6379/1
-      AISAST_CELERY_RESULT_BACKEND: redis://redis:6379/2
-      AISAST_MINIO_ENDPOINT: minio:9000
-      AISAST_OLLAMA_HOST: http://ollama:11434
-      AISAST_LLM_PROVIDER: ollama
-      AISAST_BOOTSTRAP_ADMIN_EMAIL: admin@aisast.local
-      AISAST_BOOTSTRAP_ADMIN_PASSWORD: aisast-admin
-      AISAST_WORK_DIR: /var/aisast-work
+      OPENSAST_DATABASE_URL: postgresql+psycopg2://aisast:aisast@postgres:5432/aisast
+      OPENSAST_REDIS_URL: redis://redis:6379/0
+      OPENSAST_CELERY_BROKER_URL: redis://redis:6379/1
+      OPENSAST_CELERY_RESULT_BACKEND: redis://redis:6379/2
+      OPENSAST_MINIO_ENDPOINT: minio:9000
+      OPENSAST_OLLAMA_HOST: http://ollama:11434
+      OPENSAST_LLM_PROVIDER: ollama
+      OPENSAST_BOOTSTRAP_ADMIN_EMAIL: admin@aisast.local
+      OPENSAST_BOOTSTRAP_ADMIN_PASSWORD: aisast-admin
+      OPENSAST_WORK_DIR: /var/aisast-work
     ports:
       - "8000:8000"
     volumes:
@@ -77,12 +77,12 @@ services:
       - redis
       - postgres
     environment:
-      AISAST_DATABASE_URL: postgresql+psycopg2://aisast:aisast@postgres:5432/aisast
-      AISAST_CELERY_BROKER_URL: redis://redis:6379/1
-      AISAST_CELERY_RESULT_BACKEND: redis://redis:6379/2
-      AISAST_LLM_PROVIDER: ollama
-      AISAST_OLLAMA_HOST: http://ollama:11434
-      AISAST_WORK_DIR: /var/aisast-work
+      OPENSAST_DATABASE_URL: postgresql+psycopg2://aisast:aisast@postgres:5432/aisast
+      OPENSAST_CELERY_BROKER_URL: redis://redis:6379/1
+      OPENSAST_CELERY_RESULT_BACKEND: redis://redis:6379/2
+      OPENSAST_LLM_PROVIDER: ollama
+      OPENSAST_OLLAMA_HOST: http://ollama:11434
+      OPENSAST_WORK_DIR: /var/aisast-work
     volumes:
       - ./rules:/app/rules:ro
       - aisast-work:/var/aisast-work

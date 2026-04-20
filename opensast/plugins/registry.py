@@ -5,7 +5,7 @@
 - **멱등 등록**: 같은 이름을 두 번 등록하면 경고 후 기존 것을 유지 (우선순위 명시적).
 - **지연 로드**: entry_points 는 `discover()` 호출 시점에 가져오며, 로드 실패는
   로그만 남기고 계속 진행 (하나의 플러그인이 깨져도 시스템 전체가 멈추지 않음).
-- **비활성화 가능**: `AISAST_PLUGINS_DISABLED="name1,name2"` 로 선택적 차단.
+- **비활성화 가능**: `OPENSAST_PLUGINS_DISABLED="name1,name2"` 로 선택적 차단.
 """
 
 from __future__ import annotations
@@ -156,7 +156,7 @@ class Registry(Generic[T]):
 
 
 def _disabled_plugins() -> set[str]:
-    raw = os.environ.get("AISAST_PLUGINS_DISABLED", "")
+    raw = os.environ.get("OPENSAST_PLUGINS_DISABLED", "")
     return {p.strip().lower() for p in raw.split(",") if p.strip()}
 
 

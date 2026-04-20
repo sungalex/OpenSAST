@@ -13,7 +13,7 @@ def test_load_mois_catalog_without_override(monkeypatch: pytest.MonkeyPatch) -> 
     from opensast.config import reset_settings_cache
     from opensast.mois.loader import load_mois_catalog
 
-    monkeypatch.delenv("AISAST_MOIS_CATALOG_PATH", raising=False)
+    monkeypatch.delenv("OPENSAST_MOIS_CATALOG_PATH", raising=False)
     reset_settings_cache()
     items = load_mois_catalog()
     assert len(items) == 49  # 내장 카탈로그 그대로
@@ -46,7 +46,7 @@ items:
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("AISAST_MOIS_CATALOG_PATH", str(overlay))
+    monkeypatch.setenv("OPENSAST_MOIS_CATALOG_PATH", str(overlay))
     reset_settings_cache()
 
     items = load_mois_catalog()
@@ -73,7 +73,7 @@ mappings:
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("AISAST_REFERENCE_STANDARDS_PATH", str(overlay))
+    monkeypatch.setenv("OPENSAST_REFERENCE_STANDARDS_PATH", str(overlay))
     reset_settings_cache()
     references.reset_overlay_cache()
 

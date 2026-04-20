@@ -144,7 +144,7 @@ def init_db(
             repo.ensure_bootstrap_admin(session, settings=settings)
         console.print(
             f"[yellow]Bootstrap admin[/]: {settings.bootstrap_admin_email} "
-            f"(password from AISAST_BOOTSTRAP_ADMIN_PASSWORD)"
+            f"(password from OPENSAST_BOOTSTRAP_ADMIN_PASSWORD)"
         )
 
 

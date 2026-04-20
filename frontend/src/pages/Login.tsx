@@ -36,7 +36,7 @@ export default function LoginPage() {
           최초 관리자 계정: <code>admin@aisast.local</code> /{" "}
           <code>aisast-admin</code>
           <br />
-          (운영 환경에서는 <code>AISAST_BOOTSTRAP_ADMIN_*</code> 환경변수로 변경)
+          (운영 환경에서는 <code>OPENSAST_BOOTSTRAP_ADMIN_*</code> 환경변수로 변경)
         </p>
         <label className="block">
           <span className="text-sm">이메일</span>

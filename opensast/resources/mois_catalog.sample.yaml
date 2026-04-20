@@ -1,6 +1,6 @@
 # MOIS 카탈로그 오버라이드 예시.
 #
-# AISAST_MOIS_CATALOG_PATH=/etc/aisast/mois_override.yaml 환경변수로 이 파일을
+# OPENSAST_MOIS_CATALOG_PATH=/etc/aisast/mois_override.yaml 환경변수로 이 파일을
 # 가리키면 내장 49개 카탈로그 위에 병합된다. `id` 가 기존 항목과 겹치면 전체
 # 속성을 덮어쓴다. 새로운 ID 는 추가로 등록된다.
 #

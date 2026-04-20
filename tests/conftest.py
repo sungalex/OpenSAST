@@ -93,7 +93,7 @@ def client(db_engine, monkeypatch) -> Iterator[TestClient]:
     )
 
     # LLM 강제 noop
-    monkeypatch.setenv("AISAST_LLM_PROVIDER", "noop")
+    monkeypatch.setenv("OPENSAST_LLM_PROVIDER", "noop")
 
     # API 모듈 import 후 의존성 오버라이드
     from opensast.api.deps import get_db

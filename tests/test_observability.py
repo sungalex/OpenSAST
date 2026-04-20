@@ -24,11 +24,11 @@ class TestPrometheusMiddleware:
 
 class TestJSONLogging:
     def test_json_format_configurable(self):
-        """AISAST_LOG_FORMAT=json 환경변수로 JSON 로깅 전환 가능."""
+        """OPENSAST_LOG_FORMAT=json 환경변수로 JSON 로깅 전환 가능."""
         import opensast.utils.logging as log_mod
 
         log_mod._CONFIGURED = False
-        with patch.dict(os.environ, {"AISAST_LOG_FORMAT": "json"}):
+        with patch.dict(os.environ, {"OPENSAST_LOG_FORMAT": "json"}):
             log_mod._configure_root()
         log_mod._CONFIGURED = False
 

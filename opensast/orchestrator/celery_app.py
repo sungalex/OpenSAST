@@ -6,7 +6,7 @@ Celery 의 worker pool 은 플랫폼 의존성이 있어 자동 선택 로직을
 - **Windows 네이티브** → `solo` (Celery 4+ 에서 Windows prefork 미지원)
 - **기타 POSIX** → `prefork`
 
-사용자는 `AISAST_CELERY_POOL` 환경변수(`prefork|solo|gevent|eventlet|threads`)로
+사용자는 `OPENSAST_CELERY_POOL` 환경변수(`prefork|solo|gevent|eventlet|threads`)로
 강제 오버라이드할 수 있다.
 
 이 함수는 `recommended_pool()` 로 추천값을 계산하며, 실제 워커 실행 시
@@ -30,12 +30,12 @@ def recommended_pool() -> str:
     """플랫폼에 맞는 Celery worker pool 이름 반환.
 
     우선순위:
-      1. `AISAST_CELERY_POOL` 환경변수
+      1. `OPENSAST_CELERY_POOL` 환경변수
       2. Windows → "solo"
       3. 그 외 → "prefork"
     """
 
-    override = os.environ.get("AISAST_CELERY_POOL")
+    override = os.environ.get("OPENSAST_CELERY_POOL")
     if override:
         return override.strip().lower()
     if sys.platform.startswith("win"):

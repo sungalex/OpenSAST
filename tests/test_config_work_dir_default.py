@@ -23,7 +23,7 @@ def test_settings_work_dir_matches_default() -> None:
 
 
 def test_env_override_beats_default(monkeypatch) -> None:
-    monkeypatch.setenv("AISAST_WORK_DIR", "/custom/work/dir")
+    monkeypatch.setenv("OPENSAST_WORK_DIR", "/custom/work/dir")
     s = Settings()
     assert str(s.work_dir) == "/custom/work/dir"
 

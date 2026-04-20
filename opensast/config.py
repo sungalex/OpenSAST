@@ -1,10 +1,10 @@
 """aiSAST 설정.
 
 3개 배포 프로파일(`local` / `docker` / `cloud`)을 기본값 번들로 제공하며, 모든
-항목은 `AISAST_*` 환경변수로 재정의된다. 프로파일은 단지 **기본값만** 바꾼다.
+항목은 `OPENSAST_*` 환경변수로 재정의된다. 프로파일은 단지 **기본값만** 바꾼다.
 
 선택 방법:
-  AISAST_PROFILE=cloud docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+  OPENSAST_PROFILE=cloud docker compose -f docker-compose.yml -f docker-compose.prod.yml up
 
 프로파일이 달라도 코드베이스는 동일하며, 미들웨어·로그 레벨·기본 CORS·문서 노출·
 rate limit 임계값 같은 보안·운영 관련 기본값만 조정된다.
@@ -27,7 +27,7 @@ DEFAULT_RESOURCES_DIR = PROJECT_ROOT / "aisast" / "resources"
 # 작업 디렉터리 기본값 — OS 독립적으로 tempfile.gettempdir() 을 사용한다.
 # Linux: /tmp/aisast-work, macOS: /var/folders/.../aisast-work,
 # Windows: %LOCALAPPDATA%/Temp/aisast-work (WSL2 는 Linux 처리)
-# Docker 환경에서는 compose 가 AISAST_WORK_DIR=/var/aisast-work 를 명시 주입한다.
+# Docker 환경에서는 compose 가 OPENSAST_WORK_DIR=/var/aisast-work 를 명시 주입한다.
 DEFAULT_WORK_DIR = Path(tempfile.gettempdir()) / "aisast-work"
 
 
@@ -76,7 +76,7 @@ _PROFILE_DEFAULTS: dict[Profile, dict[str, object]] = {
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env", env_prefix="AISAST_", extra="ignore"
+        env_file=".env", env_prefix="OPENSAST_", extra="ignore"
     )
 
     # ---- Core -----------------------------------------------------------
@@ -196,12 +196,12 @@ class Settings(BaseSettings):
                 or "change-me" in self.secret_key.lower()
             ):
                 warnings.append(
-                    f"[{self.profile.value}] AISAST_SECRET_KEY 가 약함: 32자 이상, "
+                    f"[{self.profile.value}] OPENSAST_SECRET_KEY 가 약함: 32자 이상, "
                     "'change-me' 미포함 필수"
                 )
         if self.profile is Profile.CLOUD and not self.cors_origins:
             warnings.append(
-                "[cloud] AISAST_CORS_ORIGINS 가 비어있음 — 운영에서는 명시 필요"
+                "[cloud] OPENSAST_CORS_ORIGINS 가 비어있음 — 운영에서는 명시 필요"
             )
         if (
             self.profile is Profile.CLOUD

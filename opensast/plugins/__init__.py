@@ -16,7 +16,7 @@
    engine_registry.register("mysonar", MySonarEngine)
    ```
 
-시작 시 `discover_all()` 이 `AISAST_PLUGINS_DISABLED` 환경변수 화이트리스트를
+시작 시 `discover_all()` 이 `OPENSAST_PLUGINS_DISABLED` 환경변수 화이트리스트를
 제외하고 모든 entry_points 를 자동 발견한다.
 """
 

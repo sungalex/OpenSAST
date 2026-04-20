@@ -135,7 +135,7 @@ hook_registry.register("jira-sync", JiraIssueHook)
 
 ### 2.4 설정 프로파일
 
-`AISAST_PROFILE ∈ {local, docker, cloud}` 으로 기본값 번들을 전환한다.
+`OPENSAST_PROFILE ∈ {local, docker, cloud}` 으로 기본값 번들을 전환한다.
 
 | 항목 | local | docker | cloud |
 |------|-------|--------|-------|
@@ -146,7 +146,7 @@ hook_registry.register("jira-sync", JiraIssueHook)
 | `log_level` | DEBUG | INFO | INFO + JSON format |
 | `enable_docs` | true | true | false |
 
-모든 값은 `AISAST_*` 환경변수로 재정의 가능하며, 프로파일은 단지 기본값
+모든 값은 `OPENSAST_*` 환경변수로 재정의 가능하며, 프로파일은 단지 기본값
 번들이다.
 
 ---
@@ -195,7 +195,7 @@ hook_registry.register("jira-sync", JiraIssueHook)
 
 ### 3.5 파일·소스코드 저장
 
-- 업로드된 ZIP 과 git clone 체크아웃은 `AISAST_WORK_DIR` 아래 임시 디렉터리.
+- 업로드된 ZIP 과 git clone 체크아웃은 `OPENSAST_WORK_DIR` 아래 임시 디렉터리.
 - 완료된 스캔 결과는 **DB 에만** 보존되며 원본 소스는 클린업된다.
 - 장기 보존이 필요한 경우 MinIO/S3 에 SARIF + 리포트를 업로드 (향후).
 
@@ -235,7 +235,7 @@ hook_registry.register("jira-sync", JiraIssueHook)
 
 | 대책 | 구현 |
 |------|------|
-| **CORS allowlist** | 프로파일별 기본값, `AISAST_CORS_ORIGINS` 환경변수로 재정의 |
+| **CORS allowlist** | 프로파일별 기본값, `OPENSAST_CORS_ORIGINS` 환경변수로 재정의 |
 | **보안 헤더** | HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy |
 | **Rate limiting** | `slowapi` — IP·사용자 기준 분당 60~100 (프로파일별) |
 | **Request size** | 업로드 500 MiB, 그 외 라우트 1 MiB (미들웨어) |
@@ -268,7 +268,7 @@ hook_registry.register("jira-sync", JiraIssueHook)
 ### 5.1 커스텀 룰 디렉터리
 
 ```bash
-export AISAST_CUSTOM_RULES_DIR=/etc/aisast/my-rules
+export OPENSAST_CUSTOM_RULES_DIR=/etc/aisast/my-rules
 ```
 
 Opengrep 엔진이 내장 `rules/opengrep/` 과 이 디렉터리를 **동시에** `--config`
@@ -278,8 +278,8 @@ Opengrep 엔진이 내장 `rules/opengrep/` 과 이 디렉터리를 **동시에*
 ### 5.2 커스텀 리소스 오버라이드
 
 ```bash
-export AISAST_MOIS_CATALOG_PATH=/etc/aisast/mois_override.yaml
-export AISAST_REFERENCE_STANDARDS_PATH=/etc/aisast/refs_override.yaml
+export OPENSAST_MOIS_CATALOG_PATH=/etc/aisast/mois_override.yaml
+export OPENSAST_REFERENCE_STANDARDS_PATH=/etc/aisast/refs_override.yaml
 ```
 
 내장 YAML 위에 사용자 YAML 이 **merge** 된다. 행안부 2023 개정판이 나오면
@@ -323,13 +323,13 @@ gate_defaults:
   max_medium: 100
 ```
 
-`AISAST_OVERLAY_CONFIG=/etc/aisast/overlay.yaml` 환경변수로 로드.
+`OPENSAST_OVERLAY_CONFIG=/etc/aisast/overlay.yaml` 환경변수로 로드.
 
 ### 5.6 프론트엔드 테마 오버라이드
 
 ```bash
 cp /path/to/custom/logo.svg frontend/public/logo.svg
-AISAST_BRAND_NAME="MyCompany SAST" docker compose build frontend
+OPENSAST_BRAND_NAME="MyCompany SAST" docker compose build frontend
 ```
 
 ---
@@ -340,18 +340,18 @@ AISAST_BRAND_NAME="MyCompany SAST" docker compose build frontend
 
 ```bash
 pip install -e '.[dev]'
-export AISAST_PROFILE=local
+export OPENSAST_PROFILE=local
 aisast serve --reload
 ```
 
 - SQLite 파일 DB (Postgres 선택)
-- Celery 없이 동기 실행 (`AISAST_SYNC_MODE=true`)
+- Celery 없이 동기 실행 (`OPENSAST_SYNC_MODE=true`)
 - 보안 기본값 완화
 
 ### 6.2 Docker Compose (팀/온프레미스)
 
 ```bash
-AISAST_PROFILE=docker docker compose up -d
+OPENSAST_PROFILE=docker docker compose up -d
 ```
 
 - 7개 서비스 (api/worker/postgres/redis/minio/ollama/frontend)
@@ -361,11 +361,11 @@ AISAST_PROFILE=docker docker compose up -d
 ### 6.3 Cloud (프로덕션)
 
 ```bash
-AISAST_PROFILE=cloud \
-  AISAST_DATABASE_URL=postgresql+psycopg2://... \
-  AISAST_REDIS_URL=rediss://... \
-  AISAST_CORS_ORIGINS=https://sast.corp.com \
-  AISAST_SECRET_KEY=$(openssl rand -hex 32) \
+OPENSAST_PROFILE=cloud \
+  OPENSAST_DATABASE_URL=postgresql+psycopg2://... \
+  OPENSAST_REDIS_URL=rediss://... \
+  OPENSAST_CORS_ORIGINS=https://sast.corp.com \
+  OPENSAST_SECRET_KEY=$(openssl rand -hex 32) \
   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 

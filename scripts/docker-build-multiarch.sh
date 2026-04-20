@@ -17,8 +17,8 @@
 set -euo pipefail
 
 TAG="${1:-aisast:local-multiarch}"
-PLATFORMS="${AISAST_PLATFORMS:-linux/amd64,linux/arm64}"
-PUSH="${AISAST_PUSH:-false}"
+PLATFORMS="${OPENSAST_PLATFORMS:-linux/amd64,linux/arm64}"
+PUSH="${OPENSAST_PUSH:-false}"
 
 cd "$(dirname "$0")/.."
 
@@ -36,7 +36,7 @@ if [[ "${PUSH}" == "true" ]]; then
   echo "== Push enabled: ${TAG} will be pushed to registry =="
 else
   BUILD_ARGS+=(--load)
-  echo "== Local load only (set AISAST_PUSH=true to push) =="
+  echo "== Local load only (set OPENSAST_PUSH=true to push) =="
 fi
 
 docker "${BUILD_ARGS[@]}"

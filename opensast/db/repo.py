@@ -25,7 +25,7 @@ def ensure_bootstrap_admin(
     """최초 기동 시 관리자 계정이 없으면 생성한다.
 
     이미 동일 이메일의 계정이 존재하면 아무것도 하지 않는다. 운영 환경에서는
-    `AISAST_BOOTSTRAP_ADMIN_EMAIL` / `AISAST_BOOTSTRAP_ADMIN_PASSWORD` 환경변수로
+    `OPENSAST_BOOTSTRAP_ADMIN_EMAIL` / `OPENSAST_BOOTSTRAP_ADMIN_PASSWORD` 환경변수로
     오버라이드하여 기본 자격증명 사용을 방지해야 한다.
     """
 

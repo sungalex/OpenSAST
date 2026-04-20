@@ -97,7 +97,7 @@
 
 | # | 위치 | Gap | 심각도 |
 |---|---|---|---|
-| C1 | `config.py:143-151`, `triage.py:212-238` | 에어갭(망분리) 강제 모드 부재. `AISAST_LLM_STRICT_OFFLINE=1` 설정 시 anthropic 프로바이더 거부 필요 | 🔴 |
+| C1 | `config.py:143-151`, `triage.py:212-238` | 에어갭(망분리) 강제 모드 부재. `OPENSAST_LLM_STRICT_OFFLINE=1` 설정 시 anthropic 프로바이더 거부 필요 | 🔴 |
 | C2 | `triage.py:152-178` | 코드 컨텍스트 내 PII/비밀(주민번호, API 키) 마스킹 부재 | 🟠 |
 | C3 | `prompts.py` | MOIS SR1-15(개인정보 노출), SR3-3(오류메시지 정보노출) 등에 대한 공공부문 특화 지침 없음 | 🟠 |
 | C4 | — | LLM 호출 감사 로그(요청 해시·모델·버전·사용자)의 외부 저장소 연동 부재 | 🟡 |
@@ -116,9 +116,9 @@
 | PR-L2 | **캐시 실패 로깅 복원**: `except Exception: pass` → `log.warning` 전환 | `triage.py:138-139, 149-150` |
 | PR-L3 | **폴백 사유 기록**: build_client 폴백 시 `Settings`에 `llm_active_provider` 기록 및 Finding.triage.rationale prefix | `triage.py:212-238` |
 | PR-L4 | **TriageResult에 `prompt_version` 필드 추가**: prompts.py 상단에 `PROMPT_VERSION = "2026.04"` 상수 도입 | `models.py`, `prompts.py`, `triage.py:202-209` |
-| PR-L5 | **에어갭 스위치 도입**: `AISAST_LLM_STRICT_OFFLINE` 환경변수. build_client에서 provider != "ollama" 시 `LLMError` 즉시 발생 | `config.py`, `triage.py:212-238` |
+| PR-L5 | **에어갭 스위치 도입**: `OPENSAST_LLM_STRICT_OFFLINE` 환경변수. build_client에서 provider != "ollama" 시 `LLMError` 즉시 발생 | `config.py`, `triage.py:212-238` |
 
-**완료 기준**: 5개 PR 머지, 신규 메트릭이 `/metrics` 엔드포인트(v0.5.0 관측성 트랙)에 노출, `AISAST_LLM_STRICT_OFFLINE=1` 환경에서 anthropic 선택 시 파이프라인이 즉시 거부됨을 테스트로 검증.
+**완료 기준**: 5개 PR 머지, 신규 메트릭이 `/metrics` 엔드포인트(v0.5.0 관측성 트랙)에 노출, `OPENSAST_LLM_STRICT_OFFLINE=1` 환경에서 anthropic 선택 시 파이프라인이 즉시 거부됨을 테스트로 검증.
 
 ---
 
@@ -129,7 +129,7 @@
 | PR-L6 | **카테고리별 프롬프트 분기** | `prompts.py`를 패키지로 분리 → `prompts/system.py`, `prompts/input_validation.py`, `prompts/crypto.py`, `prompts/session.py`, `prompts/error_handling.py`, `prompts/code_error.py`, `prompts/encapsulation.py`, `prompts/api_misuse.py`. `get_prompt(mois_item) -> (system, user_template)` 라우터 도입 |
 | PR-L7 | **Few-shot 예시 주입** | 각 카테고리 프롬프트에 진양성 1건 + 오탐 1건(앵커 예시) 삽입. 예시는 `tests/fixtures/triage_examples/*.yaml` 에서 로드 |
 | PR-L8 | **프롬프트 카탈로그 CLI** | `aisast prompts list`, `aisast prompts show <mois_id>` 서브커맨드 추가. 프롬프트 변경 PR의 리뷰 가시성 확보 |
-| PR-L9 | **Taint 확장 컨텍스트 (옵션)** | `AISAST_LLM_CONTEXT_MODE=smart`일 때 엔진의 dataflow 정보(CodeQL flow path)를 snippet으로 병합. 없으면 기존 window fallback |
+| PR-L9 | **Taint 확장 컨텍스트 (옵션)** | `OPENSAST_LLM_CONTEXT_MODE=smart`일 때 엔진의 dataflow 정보(CodeQL flow path)를 snippet으로 병합. 없으면 기존 window fallback |
 | PR-L10 | **프롬프트 회귀 테스트** | `tests/llm/golden/*.json` — 고정 Finding 입력 → 프롬프트 문자열 스냅샷. 프롬프트 수정 시 diff 강제 검토 |
 
 **완료 기준**: MOIS 카테고리 7개에 대해 각각 전용 프롬프트 존재, `pytest tests/llm -v` 통과, 사내 라벨링 데이터셋(50건) 기준 정확도 베이스라인 대비 +5%p 이상 개선.
@@ -140,8 +140,8 @@
 
 | PR | 내용 | 구현 방식 |
 |---|---|---|
-| PR-L11 | **Triager 배치 병렬화** | `triage.py:46-87`의 for-loop를 `asyncio.gather` 또는 `concurrent.futures.ThreadPoolExecutor(max_workers=N)`로 전환. `AISAST_LLM_MAX_CONCURRENCY` (기본 4) 도입. Ollama 부하를 고려해 클라이언트 레벨 세마포어 적용 |
-| PR-L12 | **Ollama 스트리밍 지원 (선택)** | `stream: True` + SSE 파싱. 단 JSON 응답 조립 안정성 검증 후 opt-in (`AISAST_OLLAMA_STREAM=1`) |
+| PR-L11 | **Triager 배치 병렬화** | `triage.py:46-87`의 for-loop를 `asyncio.gather` 또는 `concurrent.futures.ThreadPoolExecutor(max_workers=N)`로 전환. `OPENSAST_LLM_MAX_CONCURRENCY` (기본 4) 도입. Ollama 부하를 고려해 클라이언트 레벨 세마포어 적용 |
+| PR-L12 | **Ollama 스트리밍 지원 (선택)** | `stream: True` + SSE 파싱. 단 JSON 응답 조립 안정성 검증 후 opt-in (`OPENSAST_OLLAMA_STREAM=1`) |
 | PR-L13 | **Redis 커넥션 풀링** | `triage.py` 생성자에서 `redis.ConnectionPool` 1회 초기화, 인스턴스 재사용 |
 | PR-L14 | **배치 캐시 조회** | `MGET`으로 findings 전체 캐시를 1회 왕복으로 조회 (현재 N회 왕복) |
 | PR-L15 | **모델 워밍업/헬스체크** | 파이프라인 시작 전 `/api/tags` 로 모델 존재 확인. 미설치 시 명확한 에러 + 설치 가이드 링크 |
@@ -170,7 +170,7 @@
 | PR-L20 | **PII/비밀 마스킹 파이프라인** | `_collect_context` 전후에 `aisast/llm/redact.py` 삽입. 탐지 대상: 주민등록번호, 카드번호, 전화번호, API 키 패턴, AWS access key, 이메일(옵션). Before/After 해시를 감사 로그에 기록 |
 | PR-L21 | **MOIS 개인정보/오류처리 카테고리 강화 프롬프트** | SR1-15(개인정보 노출), SR3-1~3-3(에러메시지 정보노출) 전용 지침 추가. 개인정보보호법·표준개인정보 유형 참조 |
 | PR-L22 | **에어갭 강제 모드 Hardening** | Phase 1 스위치 위에 `validate_airgap()` 호출: (1) anthropic provider 차단, (2) outbound DNS/HTTP 기본 거부, (3) `pip install anthropic` 설치 여부 점검 후 경고 |
-| PR-L23 | **모델 서명·무결성 검증** | `AISAST_OLLAMA_MODEL_SHA256` 지정 시 `ollama show` 출력과 대조. 미일치 시 파이프라인 실패 |
+| PR-L23 | **모델 서명·무결성 검증** | `OPENSAST_OLLAMA_MODEL_SHA256` 지정 시 `ollama show` 출력과 대조. 미일치 시 파이프라인 실패 |
 | PR-L24 | **로컬 모델 성능 비교 러너** | `aisast llm benchmark` CLI — 라벨링 데이터셋 실행 후 gemma2:9b / qwen2.5:14b / llama3.1:8b 등 정확도·latency 비교표 출력 |
 
 **완료 기준**: 망분리 시뮬레이션 환경(외부 HTTPS 차단)에서 end-to-end 파이프라인 성공, 마스킹된 컨텍스트가 LLM에 전달됨을 테스트로 검증, 벤치마크 CLI가 5개 모델 비교 리포트 생성.
@@ -190,7 +190,7 @@
 
 **검증 자동화**:
 - `.github/workflows/llm_regression.yml` — 라벨링 셋 기반 주간 회귀 (옵션: Ollama 설치된 self-hosted 러너)
-- `tests/llm/test_strict_offline.py` — `AISAST_LLM_STRICT_OFFLINE=1` 시 anthropic 거부 검증
+- `tests/llm/test_strict_offline.py` — `OPENSAST_LLM_STRICT_OFFLINE=1` 시 anthropic 거부 검증
 - `tests/llm/test_masking.py` — redact.py로 PII 마스킹 전·후 단위 테스트
 
 ---

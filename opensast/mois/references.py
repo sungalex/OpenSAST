@@ -329,7 +329,7 @@ CWE_TO_PCI_DSS: dict[str, str] = {
 def references_for_cwe(cwe_id: str) -> list[ReferenceTag]:
     """단일 CWE 에 대응되는 모든 표준 레퍼런스 반환.
 
-    내장 매핑 + 사용자 YAML 오버레이(`AISAST_REFERENCE_STANDARDS_PATH`)를 병합해
+    내장 매핑 + 사용자 YAML 오버레이(`OPENSAST_REFERENCE_STANDARDS_PATH`)를 병합해
     돌려준다. 오버레이는 읽기 전용 캐시로 1회만 로드된다.
     """
 

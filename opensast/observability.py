@@ -1,7 +1,7 @@
 """OpenTelemetry 초기화 — 환경변수로 on/off 제어.
 
 활성화: OTEL_EXPORTER_OTLP_ENDPOINT 환경변수가 설정되면 자동 활성화.
-비활성: 기본값 (환경변수 미설정 또는 AISAST_OTEL_ENABLED=false).
+비활성: 기본값 (환경변수 미설정 또는 OPENSAST_OTEL_ENABLED=false).
 """
 
 from __future__ import annotations
@@ -16,10 +16,10 @@ log = get_logger(__name__)
 def init_telemetry(service_name: str = "aisast") -> None:
     """OpenTelemetry TracerProvider + 계측기를 초기화한다."""
 
-    enabled = os.environ.get("AISAST_OTEL_ENABLED", "").lower() in ("1", "true", "yes")
+    enabled = os.environ.get("OPENSAST_OTEL_ENABLED", "").lower() in ("1", "true", "yes")
     endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
     if not enabled and not endpoint:
-        log.debug("OpenTelemetry disabled (set AISAST_OTEL_ENABLED=true or OTEL_EXPORTER_OTLP_ENDPOINT)")
+        log.debug("OpenTelemetry disabled (set OPENSAST_OTEL_ENABLED=true or OTEL_EXPORTER_OTLP_ENDPOINT)")
         return
 
     try:

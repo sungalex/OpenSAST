@@ -12,8 +12,8 @@ def _configure_root() -> None:
     global _CONFIGURED
     if _CONFIGURED:
         return
-    level = os.environ.get("AISAST_LOG_LEVEL", "INFO").upper()
-    fmt = os.environ.get("AISAST_LOG_FORMAT", "console").lower()
+    level = os.environ.get("OPENSAST_LOG_LEVEL", "INFO").upper()
+    fmt = os.environ.get("OPENSAST_LOG_FORMAT", "console").lower()
 
     if fmt == "json":
         from pythonjsonlogger.json import JsonFormatter

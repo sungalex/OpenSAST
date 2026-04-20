@@ -1,9 +1,9 @@
 # 프로덕션 오버라이드.
 #
 # 실행:
-#   AISAST_PROFILE=cloud \
-#     AISAST_SECRET_KEY=$(openssl rand -hex 32) \
-#     AISAST_CORS_ORIGINS=https://sast.example.com \
+#   OPENSAST_PROFILE=cloud \
+#     OPENSAST_SECRET_KEY=$(openssl rand -hex 32) \
+#     OPENSAST_CORS_ORIGINS=https://sast.example.com \
 #     docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
 # 이 override 는:
@@ -27,16 +27,16 @@ services:
 
   api:
     environment:
-      AISAST_PROFILE: cloud
-      AISAST_ENABLE_DOCS: "false"
-      AISAST_ENFORCE_HTTPS: "true"
-      AISAST_SECURITY_HEADERS_ENABLED: "true"
-      AISAST_RATE_LIMIT_PER_MINUTE: "60"
+      OPENSAST_PROFILE: cloud
+      OPENSAST_ENABLE_DOCS: "false"
+      OPENSAST_ENFORCE_HTTPS: "true"
+      OPENSAST_SECURITY_HEADERS_ENABLED: "true"
+      OPENSAST_RATE_LIMIT_PER_MINUTE: "60"
     ports: []  # nginx 가 단독 진입점
 
   worker:
     environment:
-      AISAST_PROFILE: cloud
+      OPENSAST_PROFILE: cloud
 
   nginx:
     image: nginx:1.27-alpine
