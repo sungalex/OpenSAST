@@ -211,7 +211,11 @@ jobs:
       - name: Install opensast + engines
         run: |
           pip install -e '.[dev]'
-          pip install "semgrep>=1.70" "bandit[sarif]>=1.7"
+          # semgrep 은 click<8.2 를 고정하는데 typer>=0.24 는 click>=8.2.1 를 요구한다.
+          # 같은 venv 에 설치하면 click 이 강제 다운그레이드되어 typer/opensast 가 깨지므로
+          # pipx 로 격리 설치한다. (opensast 는 이들을 subprocess 바이너리로만 호출함)
+          pipx install "semgrep>=1.70"
+          pipx install "bandit[sarif]>=1.7"
       - name: Run opensast scan
         run: |
           opensast scan ./opensast --no-second-pass --no-triage -o self-scan.sarif --json self-scan.json || true

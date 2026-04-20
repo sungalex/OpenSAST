@@ -13,7 +13,6 @@ class ResizeObserverMock {
   unobserve() {}
   disconnect() {}
 }
-// @ts-expect-error: jsdom 에 ResizeObserver 가 없음
 globalThis.ResizeObserver = ResizeObserverMock;
 
 // matchMedia (Tailwind 일부 컴포넌트가 사용)
