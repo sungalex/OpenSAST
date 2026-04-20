@@ -18,8 +18,8 @@ Only the latest minor release (0.4.x) receives security patches.
 
 If you discover a security vulnerability, please **do NOT open a public issue**. Instead, report it through one of the following channels:
 
-1. **Email / 이메일**: [security@aisast.dev](mailto:security@aisast.dev)
-2. **GitHub Security Advisories**: [Report a vulnerability](https://github.com/sungalex/aiSAST/security/advisories/new)
+1. **Email / 이메일**: [security@opensast.dev](mailto:security@opensast.dev)
+2. **GitHub Security Advisories**: [Report a vulnerability](https://github.com/sungalex/openSAST/security/advisories/new)
 
 ### 신고 시 포함할 정보 / What to Include
 
@@ -52,7 +52,7 @@ The security policy covers the following components:
 
 | Component | Scope |
 |-----------|-------|
-| 코어 코드 (Core code) | `aisast/` Python 패키지 전체 |
+| 코어 코드 (Core code) | `opensast/` Python 패키지 전체 |
 | 분석 룰 (Rules) | `rules/` 디렉토리의 Opengrep YAML 룰 |
 | API | FastAPI 기반 REST API 엔드포인트 |
 | 프론트엔드 (Frontend) | `frontend/` React 웹 UI |

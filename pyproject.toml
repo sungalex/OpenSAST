@@ -109,11 +109,11 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/sungalex/aiSAST"
-Documentation = "https://github.com/sungalex/aiSAST/blob/main/docs/USER_GUIDE.md"
-Architecture = "https://github.com/sungalex/aiSAST/blob/main/docs/ARCHITECTURE.md"
-Issues = "https://github.com/sungalex/aiSAST/issues"
-Repository = "https://github.com/sungalex/aiSAST"
+Homepage = "https://github.com/sungalex/openSAST"
+Documentation = "https://github.com/sungalex/openSAST/blob/main/docs/USER_GUIDE.md"
+Architecture = "https://github.com/sungalex/openSAST/blob/main/docs/ARCHITECTURE.md"
+Issues = "https://github.com/sungalex/openSAST/issues"
+Repository = "https://github.com/sungalex/openSAST"
 
 [project.scripts]
 opensast = "opensast.cli:app"

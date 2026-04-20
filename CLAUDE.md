@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**aiSAST** is an open-source SAST (Static Application Security Testing) tool designed to detect the 49 security weaknesses defined in Korea's Ministry of Public Administration and Security (MOIS) guidelines for public sector software development.
+**openSAST** is an open-source SAST (Static Application Security Testing) tool designed to detect the 49 security weaknesses defined in Korea's Ministry of Public Administration and Security (MOIS) guidelines for public sector software development.
 
 ### Core Design Principles
 

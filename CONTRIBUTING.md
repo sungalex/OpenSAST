@@ -1,6 +1,6 @@
-# aiSAST 기여 가이드
+# openSAST 기여 가이드
 
-aiSAST 프로젝트에 관심을 가져주셔서 감사합니다. 이 문서는 프로젝트에 기여하는 방법을 안내합니다.
+openSAST 프로젝트에 관심을 가져주셔서 감사합니다. 이 문서는 프로젝트에 기여하는 방법을 안내합니다.
 
 ## 목차
 
@@ -27,8 +27,8 @@ aiSAST 프로젝트에 관심을 가져주셔서 감사합니다. 이 문서는 
 
 ```bash
 # 저장소 클론
-git clone https://github.com/sungalex/aiSAST.git
-cd aiSAST
+git clone https://github.com/sungalex/openSAST.git
+cd openSAST
 
 # 가상환경 생성 및 활성화
 python -m venv .venv
@@ -69,12 +69,12 @@ brew install pango cairo libffi
 
 - **린터/포매터**: [ruff](https://docs.astral.sh/ruff/) 사용
   ```bash
-  ruff check aisast        # 린트 검사
-  ruff format aisast       # 코드 포매팅
+  ruff check opensast        # 린트 검사
+  ruff format opensast       # 코드 포매팅
   ```
 - **타입 체크**: [mypy](https://mypy.readthedocs.io/) 사용 (점진 도입 중)
   ```bash
-  mypy aisast --ignore-missing-imports
+  mypy opensast --ignore-missing-imports
   ```
 - **주요 규칙**:
   - 라인 길이: 120자
@@ -150,7 +150,7 @@ ci: pip-audit 및 mypy 스텝 추가
 
 ## Opengrep 룰 작성 가이드
 
-aiSAST의 Opengrep(Semgrep) 커스텀 룰은 `rules/` 디렉토리에 YAML 형식으로 작성합니다.
+openSAST의 Opengrep(Semgrep) 커스텀 룰은 `rules/` 디렉토리에 YAML 형식으로 작성합니다.
 
 ### 필수 메타데이터
 
@@ -197,15 +197,15 @@ semgrep --validate --config rules/
 
 ## 엔진 플러그인 작성 가이드
 
-aiSAST는 플러그인 아키텍처로 분석 엔진을 확장할 수 있습니다.
+openSAST는 플러그인 아키텍처로 분석 엔진을 확장할 수 있습니다.
 
 ### 플러그인 구조
 
-새 엔진 플러그인은 `aisast/plugins/` 디렉토리에 작성합니다:
+새 엔진 플러그인은 `opensast/plugins/` 디렉토리에 작성합니다:
 
 ```python
-# aisast/plugins/my_engine.py
-from aisast.plugins.base import EnginePlugin, ScanResult
+# opensast/plugins/my_engine.py
+from opensast.plugins.base import EnginePlugin, ScanResult
 
 class MyEnginePlugin(EnginePlugin):
     """커스텀 분석 엔진 플러그인."""
@@ -227,8 +227,8 @@ class MyEnginePlugin(EnginePlugin):
 `pyproject.toml`에 플러그인을 등록합니다:
 
 ```toml
-[project.entry-points."aisast.engines"]
-my-engine = "aisast.plugins.my_engine:MyEnginePlugin"
+[project.entry-points."opensast.engines"]
+my-engine = "opensast.plugins.my_engine:MyEnginePlugin"
 ```
 
 ### 플러그인 요구사항
@@ -249,7 +249,7 @@ my-engine = "aisast.plugins.my_engine:MyEnginePlugin"
 pytest -q --tb=short
 
 # 커버리지 포함 실행
-pytest -q --tb=short --cov=aisast --cov-report=term-missing
+pytest -q --tb=short --cov=opensast --cov-report=term-missing
 
 # 특정 테스트 파일 실행
 pytest tests/test_api.py -v
@@ -273,14 +273,14 @@ npm run test:watch
 ### MOIS 49개 항목 검증
 
 ```bash
-python -c "from aisast.mois import MOIS_ITEMS; assert len(MOIS_ITEMS) == 49"
+python -c "from opensast.mois import MOIS_ITEMS; assert len(MOIS_ITEMS) == 49"
 ```
 
 ---
 
 ## 질문이 있으신가요?
 
-- [GitHub Issues](https://github.com/sungalex/aiSAST/issues)에 질문을 남겨주세요.
+- [GitHub Issues](https://github.com/sungalex/openSAST/issues)에 질문을 남겨주세요.
 - 보안 취약점 관련은 [SECURITY.md](./SECURITY.md)를 참조해주세요.
 
 감사합니다!

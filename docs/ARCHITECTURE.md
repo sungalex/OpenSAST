@@ -1,6 +1,6 @@
-# aiSAST 아키텍처
+# openSAST 아키텍처
 
-> 본 문서는 aiSAST 의 **애플리케이션 / 데이터 / 보안** 3개 관점에서 설계
+> 본 문서는 openSAST 의 **애플리케이션 / 데이터 / 보안** 3개 관점에서 설계
 > 원칙과 구현 상세를 기술한다. 안정성·확장성·유지보수성·편의성을 극대화하기
 > 위해 다음 4가지 설계 목표를 따른다.
 >
@@ -93,15 +93,15 @@ class ProjectRepo:
 모든 확장 포인트는 동일한 `Registry` 패턴으로 관리된다:
 
 ```python
-registry = Registry[EngineClass]("aisast.engines")
+registry = Registry[EngineClass]("opensast.engines")
 
 # 내장 등록
 registry.register("opengrep", OpengrepEngine)
 registry.register("bandit",   BanditEngine)
 
-# 외부 패키지가 entry_points 로 등록 (pip install aisast-plugin-xyz)
+# 외부 패키지가 entry_points 로 등록 (pip install opensast-plugin-xyz)
 # pyproject.toml:
-#   [project.entry-points."aisast.engines"]
+#   [project.entry-points."opensast.engines"]
 #   xyz = "aisast_plugin_xyz:XyzEngine"
 
 # 런타임 조회
@@ -113,11 +113,11 @@ registry.all()
 
 | 그룹 | entry_point 그룹 | 인터페이스 |
 |------|------------------|-----------|
-| 분석 엔진 | `aisast.engines` | `Engine` (base.py) |
-| LLM 프로바이더 | `aisast.llm` | `LLMClient` |
-| 리포트 포맷 | `aisast.reports` | `ReportWriter` |
-| 레퍼런스 표준 | `aisast.references` | `ReferenceProvider` |
-| 수명주기 훅 | `aisast.hooks` | `ScanHook` |
+| 분석 엔진 | `opensast.engines` | `Engine` (base.py) |
+| LLM 프로바이더 | `opensast.llm` | `LLMClient` |
+| 리포트 포맷 | `opensast.reports` | `ReportWriter` |
+| 레퍼런스 표준 | `opensast.references` | `ReferenceProvider` |
+| 수명주기 훅 | `opensast.hooks` | `ScanHook` |
 
 ### 2.3 확장 훅
 
@@ -157,7 +157,7 @@ hook_registry.register("jira-sync", JiraIssueHook)
 
 - **Alembic** 를 정식 마이그레이션 도구로 도입. `alembic/versions/` 에
   리비전 파일이 버전 관리됨.
-- 기존 `aisast/db/migrate.py::auto_migrate()` 는 **개발 전용 fallback** 으로
+- 기존 `opensast/db/migrate.py::auto_migrate()` 는 **개발 전용 fallback** 으로
   축소. 프로덕션에서는 `alembic upgrade head` 를 반드시 실행.
 - 모델 변경 → `alembic revision --autogenerate -m "..."` → 리뷰 → 커밋.
 
@@ -177,7 +177,7 @@ hook_registry.register("jira-sync", JiraIssueHook)
 
 | 배포 모드 | Postgres | Redis | MinIO | Ollama |
 |----------|----------|-------|-------|--------|
-| **Local** | SQLite 파일 (`.aisast-work/aisast.db`) 또는 로컬 Postgres | 선택 | 선택 | 선택 |
+| **Local** | SQLite 파일 (`.opensast-work/opensast.db`) 또는 로컬 Postgres | 선택 | 선택 | 선택 |
 | **Docker compose** | `postgres:16-alpine` 컨테이너 + named volume | `redis:7-alpine` | `minio:latest` | `ollama:latest` |
 | **Cloud** | **관리형 Postgres** (RDS/Cloud SQL/Aurora) | 관리형 Redis (ElastiCache/Memorystore) | 관리형 오브젝트 스토어 (S3/GCS) | **Anthropic API** 또는 GPU 노드 |
 
@@ -250,7 +250,7 @@ hook_registry.register("jira-sync", JiraIssueHook)
 - **XXE**: YAML/XML 파싱 시 `safe_load`, lxml 비사용
 - **Deserialization**: pickle 사용 금지, JSON 만
 - **오류 메시지 노출**: 내부 예외는 로그로만, 사용자에게는 일반화된 메시지
-- **Self-SAST**: CI 파이프라인에서 aisast 가 자기 자신을 스캔해 회귀 차단
+- **Self-SAST**: CI 파이프라인에서 opensast 가 자기 자신을 스캔해 회귀 차단
 
 ### 4.6 감사 & 모니터링
 
@@ -263,12 +263,12 @@ hook_registry.register("jira-sync", JiraIssueHook)
 
 ## 5. 커스터마이징 격리
 
-사용자가 aiSAST 를 포크하지 않고 커스터마이징할 수 있는 6가지 확장 지점:
+사용자가 openSAST 를 포크하지 않고 커스터마이징할 수 있는 6가지 확장 지점:
 
 ### 5.1 커스텀 룰 디렉터리
 
 ```bash
-export OPENSAST_CUSTOM_RULES_DIR=/etc/aisast/my-rules
+export OPENSAST_CUSTOM_RULES_DIR=/etc/opensast/my-rules
 ```
 
 Opengrep 엔진이 내장 `rules/opengrep/` 과 이 디렉터리를 **동시에** `--config`
@@ -278,8 +278,8 @@ Opengrep 엔진이 내장 `rules/opengrep/` 과 이 디렉터리를 **동시에*
 ### 5.2 커스텀 리소스 오버라이드
 
 ```bash
-export OPENSAST_MOIS_CATALOG_PATH=/etc/aisast/mois_override.yaml
-export OPENSAST_REFERENCE_STANDARDS_PATH=/etc/aisast/refs_override.yaml
+export OPENSAST_MOIS_CATALOG_PATH=/etc/opensast/mois_override.yaml
+export OPENSAST_REFERENCE_STANDARDS_PATH=/etc/opensast/refs_override.yaml
 ```
 
 내장 YAML 위에 사용자 YAML 이 **merge** 된다. 행안부 2023 개정판이 나오면
@@ -288,20 +288,20 @@ Python 수정 없이 YAML 하나만 배포하면 된다.
 ### 5.3 플러그인 패키지
 
 ```
-my-aisast-plugin/
+my-opensast-plugin/
 ├── pyproject.toml
-│   └── [project.entry-points."aisast.engines"]
+│   └── [project.entry-points."opensast.engines"]
 │       mysonar = "my_aisast_plugin:MySonarEngine"
 └── my_aisast_plugin/__init__.py
 ```
 
-`pip install my-aisast-plugin` 만으로 aiSAST 가 해당 엔진을 자동 발견.
+`pip install my-opensast-plugin` 만으로 openSAST 가 해당 엔진을 자동 발견.
 
 ### 5.4 훅 구독
 
 ```python
 # my_aisast_plugin/hooks.py
-from aisast.hooks import ScanHook, hook_registry
+from opensast.hooks import ScanHook, hook_registry
 
 class JiraSync(ScanHook):
     def on_status_change(self, finding, old, new):
@@ -314,7 +314,7 @@ hook_registry.register("jira-sync", JiraSync())
 ### 5.5 설정 오버레이
 
 ```yaml
-# /etc/aisast/overlay.yaml
+# /etc/opensast/overlay.yaml
 llm:
   provider: anthropic
   model: claude-opus-4-6
@@ -323,7 +323,7 @@ gate_defaults:
   max_medium: 100
 ```
 
-`OPENSAST_OVERLAY_CONFIG=/etc/aisast/overlay.yaml` 환경변수로 로드.
+`OPENSAST_OVERLAY_CONFIG=/etc/opensast/overlay.yaml` 환경변수로 로드.
 
 ### 5.6 프론트엔드 테마 오버라이드
 
@@ -341,7 +341,7 @@ OPENSAST_BRAND_NAME="MyCompany SAST" docker compose build frontend
 ```bash
 pip install -e '.[dev]'
 export OPENSAST_PROFILE=local
-aisast serve --reload
+opensast serve --reload
 ```
 
 - SQLite 파일 DB (Postgres 선택)

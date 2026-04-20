@@ -28,7 +28,7 @@
 
 > **"오탐 필터링의 핵심 기능은 완성되었다. 다음은 MOIS 49개 항목별 프롬프트 분기 → 배치/병렬 호출 → 관측성 → 에어갭(망분리) 강제 모드 순서로 고도화하면 KISA CC 인증 트랙과 공공기관 운영요건을 동시에 충족할 수 있다."**
 
-현 파이프라인(`aisast/llm/`)은 **원본 Finding 절대 보존 원칙**, 3-프로바이더 폴백(ollama→anthropic→noop), tenacity 재시도, Redis 24h 캐시, 한국어 MOIS 프롬프트를 이미 갖추고 있다. 그러나 **(1) 단일 프롬프트 템플릿의 범용성 한계**, **(2) 순차 호출로 인한 대형 PR 지연**, **(3) Ollama 측 토큰/latency 메트릭 부재**, **(4) 망분리 강제 모드 부재**가 공공부문 운영 레벨로의 도약을 막는 병목이다.
+현 파이프라인(`opensast/llm/`)은 **원본 Finding 절대 보존 원칙**, 3-프로바이더 폴백(ollama→anthropic→noop), tenacity 재시도, Redis 24h 캐시, 한국어 MOIS 프롬프트를 이미 갖추고 있다. 그러나 **(1) 단일 프롬프트 템플릿의 범용성 한계**, **(2) 순차 호출로 인한 대형 PR 지연**, **(3) Ollama 측 토큰/latency 메트릭 부재**, **(4) 망분리 강제 모드 부재**가 공공부문 운영 레벨로의 도약을 막는 병목이다.
 
 ---
 
@@ -38,14 +38,14 @@
 
 | 영역 | 위치 | 평가 |
 |---|---|---|
-| **원본 보존 원칙** | `aisast/llm/triage.py:30-36` | Finding 제거 금지 원칙이 주석과 코드에서 이중 강제 |
-| **프로바이더 추상화** | `aisast/llm/base.py`, `ollama.py`, `anthropic.py`, `noop.py` | `LLMClient` 추상 + 플러그인 레지스트리 기반 확장성 |
-| **자동 폴백** | `aisast/llm/triage.py:212-238` | 프로바이더 초기화 실패 시 noop으로 자동 강등 |
-| **재시도** | `aisast/llm/triage.py:89-107` | tenacity 3회, 지수백오프 2-30초 |
-| **캐시** | `aisast/llm/triage.py:110-150` | SHA-256 기반 캐시 키, Redis 24h TTL |
-| **한국어 프롬프트** | `aisast/llm/prompts.py:5-48` | MOIS 2021 가이드 준거, 5대 판별 기준 명시 |
-| **JSON 파싱 견고성** | `aisast/llm/triage.py:180-209`, `243-250` | 정규식 추출 + 실패 시 `needs_review` + `default_fp` 안전망 |
-| **설정 외부화** | `aisast/config.py:143-151` | 6개 환경변수로 프로바이더·모델·타임아웃·컨텍스트 제어 |
+| **원본 보존 원칙** | `opensast/llm/triage.py:30-36` | Finding 제거 금지 원칙이 주석과 코드에서 이중 강제 |
+| **프로바이더 추상화** | `opensast/llm/base.py`, `ollama.py`, `anthropic.py`, `noop.py` | `LLMClient` 추상 + 플러그인 레지스트리 기반 확장성 |
+| **자동 폴백** | `opensast/llm/triage.py:212-238` | 프로바이더 초기화 실패 시 noop으로 자동 강등 |
+| **재시도** | `opensast/llm/triage.py:89-107` | tenacity 3회, 지수백오프 2-30초 |
+| **캐시** | `opensast/llm/triage.py:110-150` | SHA-256 기반 캐시 키, Redis 24h TTL |
+| **한국어 프롬프트** | `opensast/llm/prompts.py:5-48` | MOIS 2021 가이드 준거, 5대 판별 기준 명시 |
+| **JSON 파싱 견고성** | `opensast/llm/triage.py:180-209`, `243-250` | 정규식 추출 + 실패 시 `needs_review` + `default_fp` 안전망 |
+| **설정 외부화** | `opensast/config.py:143-151` | 6개 환경변수로 프로바이더·모델·타임아웃·컨텍스트 제어 |
 
 ### 2.2 해결해야 할 핵심 약점
 
@@ -128,7 +128,7 @@
 |---|---|---|
 | PR-L6 | **카테고리별 프롬프트 분기** | `prompts.py`를 패키지로 분리 → `prompts/system.py`, `prompts/input_validation.py`, `prompts/crypto.py`, `prompts/session.py`, `prompts/error_handling.py`, `prompts/code_error.py`, `prompts/encapsulation.py`, `prompts/api_misuse.py`. `get_prompt(mois_item) -> (system, user_template)` 라우터 도입 |
 | PR-L7 | **Few-shot 예시 주입** | 각 카테고리 프롬프트에 진양성 1건 + 오탐 1건(앵커 예시) 삽입. 예시는 `tests/fixtures/triage_examples/*.yaml` 에서 로드 |
-| PR-L8 | **프롬프트 카탈로그 CLI** | `aisast prompts list`, `aisast prompts show <mois_id>` 서브커맨드 추가. 프롬프트 변경 PR의 리뷰 가시성 확보 |
+| PR-L8 | **프롬프트 카탈로그 CLI** | `opensast prompts list`, `opensast prompts show <mois_id>` 서브커맨드 추가. 프롬프트 변경 PR의 리뷰 가시성 확보 |
 | PR-L9 | **Taint 확장 컨텍스트 (옵션)** | `OPENSAST_LLM_CONTEXT_MODE=smart`일 때 엔진의 dataflow 정보(CodeQL flow path)를 snippet으로 병합. 없으면 기존 window fallback |
 | PR-L10 | **프롬프트 회귀 테스트** | `tests/llm/golden/*.json` — 고정 Finding 입력 → 프롬프트 문자열 스냅샷. 프롬프트 수정 시 diff 강제 검토 |
 
@@ -167,11 +167,11 @@
 
 | PR | 내용 | 구현 방식 |
 |---|---|---|
-| PR-L20 | **PII/비밀 마스킹 파이프라인** | `_collect_context` 전후에 `aisast/llm/redact.py` 삽입. 탐지 대상: 주민등록번호, 카드번호, 전화번호, API 키 패턴, AWS access key, 이메일(옵션). Before/After 해시를 감사 로그에 기록 |
+| PR-L20 | **PII/비밀 마스킹 파이프라인** | `_collect_context` 전후에 `opensast/llm/redact.py` 삽입. 탐지 대상: 주민등록번호, 카드번호, 전화번호, API 키 패턴, AWS access key, 이메일(옵션). Before/After 해시를 감사 로그에 기록 |
 | PR-L21 | **MOIS 개인정보/오류처리 카테고리 강화 프롬프트** | SR1-15(개인정보 노출), SR3-1~3-3(에러메시지 정보노출) 전용 지침 추가. 개인정보보호법·표준개인정보 유형 참조 |
 | PR-L22 | **에어갭 강제 모드 Hardening** | Phase 1 스위치 위에 `validate_airgap()` 호출: (1) anthropic provider 차단, (2) outbound DNS/HTTP 기본 거부, (3) `pip install anthropic` 설치 여부 점검 후 경고 |
 | PR-L23 | **모델 서명·무결성 검증** | `OPENSAST_OLLAMA_MODEL_SHA256` 지정 시 `ollama show` 출력과 대조. 미일치 시 파이프라인 실패 |
-| PR-L24 | **로컬 모델 성능 비교 러너** | `aisast llm benchmark` CLI — 라벨링 데이터셋 실행 후 gemma2:9b / qwen2.5:14b / llama3.1:8b 등 정확도·latency 비교표 출력 |
+| PR-L24 | **로컬 모델 성능 비교 러너** | `opensast llm benchmark` CLI — 라벨링 데이터셋 실행 후 gemma2:9b / qwen2.5:14b / llama3.1:8b 등 정확도·latency 비교표 출력 |
 
 **완료 기준**: 망분리 시뮬레이션 환경(외부 HTTPS 차단)에서 end-to-end 파이프라인 성공, 마스킹된 컨텍스트가 LLM에 전달됨을 테스트로 검증, 벤치마크 CLI가 5개 모델 비교 리포트 생성.
 
@@ -183,10 +183,10 @@
 |---|---|---|---|
 | 오탐 판별 정확도 (Precision@TP) | 미측정 | ≥ 0.85 | 사내 라벨링 셋 50건 |
 | 오탐 판별 재현율 (Recall@FP) | 미측정 | ≥ 0.75 | 사내 라벨링 셋 50건 |
-| Findings 100건 triage 시간 | ~수분 (추정) | < 30s (로컬) | `aisast scan` 벤치마크 |
+| Findings 100건 triage 시간 | ~수분 (추정) | < 30s (로컬) | `opensast scan` 벤치마크 |
 | LLM 캐시 히트율 | 미측정 | ≥ 60% (반복 실행 시) | Prometheus `cache_hits_total / calls_total` |
 | 에어갭 강제 모드 통과율 | 0% | 100% | 망분리 CI job |
-| 프롬프트 버전 커버리지 | 0 (단일) | 7개 카테고리 분기 | `aisast prompts list` |
+| 프롬프트 버전 커버리지 | 0 (단일) | 7개 카테고리 분기 | `opensast prompts list` |
 
 **검증 자동화**:
 - `.github/workflows/llm_regression.yml` — 라벨링 셋 기반 주간 회귀 (옵션: Ollama 설치된 self-hosted 러너)
@@ -211,20 +211,20 @@
 
 | 주제 | 파일 | 라인 |
 |---|---|---|
-| Triager 메인 루프 | `aisast/llm/triage.py` | 46-87 |
-| 재시도 | `aisast/llm/triage.py` | 89-107 |
-| 캐시 | `aisast/llm/triage.py` | 110-150 |
-| 컨텍스트 수집 | `aisast/llm/triage.py` | 152-178 |
-| 응답 파싱 | `aisast/llm/triage.py` | 180-209 |
-| 프로바이더 빌더 | `aisast/llm/triage.py` | 212-238 |
-| Ollama 클라이언트 | `aisast/llm/ollama.py` | 1-46 |
-| Anthropic 클라이언트 | `aisast/llm/anthropic.py` | 1-48 |
-| 프롬프트 템플릿 | `aisast/llm/prompts.py` | 1-48 |
-| LLM 설정 | `aisast/config.py` | 143-151 |
-| MOIS 카탈로그 | `aisast/mois/catalog.py` | — |
+| Triager 메인 루프 | `opensast/llm/triage.py` | 46-87 |
+| 재시도 | `opensast/llm/triage.py` | 89-107 |
+| 캐시 | `opensast/llm/triage.py` | 110-150 |
+| 컨텍스트 수집 | `opensast/llm/triage.py` | 152-178 |
+| 응답 파싱 | `opensast/llm/triage.py` | 180-209 |
+| 프로바이더 빌더 | `opensast/llm/triage.py` | 212-238 |
+| Ollama 클라이언트 | `opensast/llm/ollama.py` | 1-46 |
+| Anthropic 클라이언트 | `opensast/llm/anthropic.py` | 1-48 |
+| 프롬프트 템플릿 | `opensast/llm/prompts.py` | 1-48 |
+| LLM 설정 | `opensast/config.py` | 143-151 |
+| MOIS 카탈로그 | `opensast/mois/catalog.py` | — |
 | 기존 테스트 | `tests/test_llm_triage.py`, `tests/test_triage_cache.py` | — |
 
 ---
 
-**작성자**: aiSAST 코어 팀 (Claude Code 협업)
+**작성자**: openSAST 코어 팀 (Claude Code 협업)
 **다음 리뷰**: Phase 1 완료 시점 (예상 2026-04-27) — KPI 베이스라인 측정 결과 반영
