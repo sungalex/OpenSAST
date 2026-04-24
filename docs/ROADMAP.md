@@ -1,8 +1,12 @@
 # OpenSAST 고도화 전략 및 로드맵 (v0.4.1 → v1.0)
 
-> **문서 기준일**: 2026-04-16 (v0.6.0 룰 확대 반영: 2026-04-17)
+> **문서 기준일**: 2026-04-24 (v0.6.0 LLM 실구현 반영 · ADR-0001 통합)
 > **분석 대상 버전**: v0.6.0 (v0.5.0 관측성/성능 + v0.6.0 룰 커버리지 확대)
 > **문서 목적**: 현 코드베이스의 구현 완성도를 계층별로 진단하고, v1.0 (KISA CC 인증 트랙) 까지의 단계별 고도화 경로를 제시한다.
+> **연관 문서**:
+> - [ADR-0001 — 2-Pass 파이프라인 단일 오케스트레이션 통합 (rev.2)](./adr/ADR-0001-unified-analysis-pipeline.md) — CodeQL·ESLint 제거, Joern 도입, chord 기반 병렬화 결정
+> - [UPGRADE-PLAN — 통합 분석 파이프라인 고도화 계획](./plan/UPGRADE-PLAN-unified-analysis.md) — Phase 0~4 16주 실행계획
+> - [LLM_ENHANCEMENT_PLAN](./LLM_ENHANCEMENT_PLAN.md) — Triage 파이프라인 5-Phase 고도화
 
 ---
 
@@ -69,11 +73,14 @@ openSAST는 2-Pass 파이프라인 · 6개 엔진 통합 · MOIS 49 카탈로그
 |---|---|---|---|
 | R1 | `rules/opengrep/**` | ~~MOIS 49 중 13개만 커버~~ → **v0.6.0에서 46/49 (93%) 달성**. Opengrep 30개 YAML(113개 룰) + CodeQL 12개 쿼리. 미커버 3개(SR1-15, SR5-3, SR5-6)는 C/C++ 메모리 취약점으로 현재 지원 언어 범위 밖 | ✅ |
 | R2 | `rules/codeql/java/` | ~~`toctou.ql` 1개 파일뿐~~ → **v0.6.0에서 12개 쿼리** (SQL injection taint, XXE, SSRF, integer overflow, deserialization, unbounded loop, null-deref, resource-leak, race-condition, unchecked-return, uninitialized-variable + 기존 toctou) | ✅ |
+| R2* | `rules/codeql/**`, `opensast/engines/codeql.py` | **ADR-0001 결정**: v0.5/Phase 1에서 CodeQL 엔진·룰셋 전면 삭제 → Joern(Apache-2.0)으로 대체. 사유: GitHub Advanced Security 상용 라이선스 리스크 차단. 기존 12개 쿼리는 Joern `.sc` 스크립트로 재작성 | 🟠 |
 | R3 | `opensast/sarif/merge.py:56` | `candidate.severity.value < existing.severity.value` 문자열 비교 → `"LOW" < "MEDIUM"` 가 `True` 라 **LOW 가 MEDIUM 을 이김** (HIGH < LOW 는 우연히 맞음) | 🔴 |
 | R4 | `opensast/sarif/merge.py:27-36` | 중복 제거 키가 `(file, line, cwe_tuple)` — snippet/message 차이 무시, 의미론적 중복 미탐지 | 🟡 |
 | R5 | `opensast/sarif/parser.py:156-172` | SARIF logicalLocation, relocation, threadFlows, taxa 등 고급 필드 미처리 | 🟡 |
 | R6 | `opensast/sarif/parser.py:88-110` | SARIF version 검증 없음, 1.x 호환성 정의 없음 | 🟢 |
 | R7 | `rules/opengrep/java/sql-injection.yml` 전반 | 룰별 `metadata.remediation` 필드 없음 (조치 권고가 룰에 내장되지 않음) | 🟠 |
+| R8 | `Dockerfile:58`, `pyproject.toml` | **엔진 버전 상한 부재** — `"semgrep>=1.70"`, `"bandit[sarif]>=1.7"` 형태로 `>=` 만 설정 → 재현성/공급망 리스크. SHA256 검증 없음, CVE 자동 감지 체계 없음. Joern 은 ADR-0002 에서 Tier 1 고정, Opengrep 도 ADR-0004 3-Tier 정책으로 동급 승격 예정 | 🟠 |
+| R9 | 전 엔진 | 엔진 메타데이터(`license`, `versioning_tier`, `upstream_repo`) 레지스트리 없음 — `/api/system/engines` 감사 엔드포인트 부재 | 🟡 |
 
 ### 3.2 Orchestrator / Pipeline
 
@@ -93,12 +100,14 @@ openSAST는 2-Pass 파이프라인 · 6개 엔진 통합 · MOIS 49 카탈로그
 
 | # | 위치 | Gap | 심각도 |
 |---|---|---|---|
-| L1 | `opensast/llm/triage.py:45-75` | findings **순차 처리** — 1000개 × 2초 = 30분 직렬. 배치/병렬 없음 | 🟠 |
-| L2 | `opensast/llm/triage.py:71,111,116,120` | `fp_probability=50` 4곳 하드코딩 — 설정 불가 | 🟡 |
-| L3 | `opensast/llm/triage.py` | **결과 캐싱 없음** — 동일 rule/파일/라인/snippet 재분석 시 LLM 재호출 | 🟠 |
-| L4 | `opensast/llm/ollama.py:L29`, `anthropic.py:L40` | 재시도 / 서킷브레이커 / 토큰 레이트 리밋 없음 | 🟠 |
+| L1 | `opensast/llm/triage.py:50` | findings **순차 처리** (`for finding in findings:`) — 1000개 × 2초 = 30분 직렬. 배치/병렬 없음. LLM_ENHANCEMENT_PLAN Phase 3에서 해결 예정 | 🟠 |
+| L2 | ~~`opensast/llm/triage.py`~~ | ~~`fp_probability=50` 하드코딩~~ → **v0.6.0에서 해결**: `settings.llm_default_fp_probability` (`triage.py:49`) | ✅ |
+| L3 | ~~`opensast/llm/triage.py`~~ | ~~결과 캐싱 없음~~ → **v0.6.0에서 해결**: SHA-256 기반 Redis 캐시 24h TTL (`_cache_key`, `_get_cached`, `_set_cached`) | ✅ |
+| L4 | `opensast/llm/triage.py:89-107` | ~~재시도 없음~~ → tenacity 3회·지수백오프 2-30초 구현 완료. 단, **서킷브레이커**와 **토큰 레이트 리밋**은 여전히 부재. Redis 캐시 실패 silent swallow(`except Exception: pass`) | 🟡 |
 | L5 | `opensast/llm/triage.py:152-154` | `factory()` 호출이 `TypeError` 포괄 — 초기화 실패 원인 감춰짐 | 🟡 |
-| L6 | `opensast/llm/prompts.py` | Few-shot 예시 없음 (system prompt + user template 만) | 🟡 |
+| L6 | `opensast/llm/prompts.py` | Few-shot 예시 없음, MOIS 카테고리별(입력검증/암호/세션/에러처리) 프롬프트 분기 없음 — LLM_ENHANCEMENT_PLAN Phase 2에서 해결 | 🟠 |
+| L7 | `opensast/llm/` 전체 | **에어갭(망분리) 강제 모드 부재** — `OPENSAST_AIRGAP=true` 시 cloud provider 초기화 차단 가드 없음. 공공부문 감사 대응 블로커 | 🟠 |
+| L8 | `opensast/llm/ollama.py`, `anthropic.py` | `input/output_tokens` 미기록 → 로컬 모델 품질·비용 벤치마크 불가 | 🟡 |
 
 ### 3.4 Database & 서비스 레이어
 
@@ -241,6 +250,8 @@ openSAST는 2-Pass 파이프라인 · 6개 엔진 통합 · MOIS 49 카탈로그
 ### v0.5.0 — 관측성 · 성능 · 확장성 기반 (3~4주)
 
 > **목표**: 프로덕션 운영 최소 요건 달성.
+>
+> **중요**: 본 섹션의 "5.4 파이프라인 견고성"은 ADR-0001 결정에 따라 [UPGRADE-PLAN Phase 1~2](./plan/UPGRADE-PLAN-unified-analysis.md) 로 대체됩니다. 즉, 단순 retry/autoretry 추가가 아니라 `ScanPipeline` 을 `Celery chord + light/heavy/llm 3-queue` 구조로 리팩터링합니다. O1(2nd pass 자동 비활성 버그)은 Phase 1의 `mode: fast/standard/deep` 플래그 전환 시 자연 소멸.
 
 #### 5.1 관측성 (Observability)
 - `prometheus-client` 추가 → FastAPI `/metrics` 엔드포인트
@@ -294,6 +305,10 @@ openSAST는 2-Pass 파이프라인 · 6개 엔진 통합 · MOIS 49 카탈로그
 ### v0.6.0 — 룰 커버리지 확대 & 멀티테넌시 (4~6주)
 
 > **목표**: "실제로 쓸 수 있는 SAST" 를 만든다.
+>
+> **상태**: ✅ **완료** (2026-04-17 릴리스). MOIS 46/49 항목 커버(93%), 멀티테넌시 마이그레이션(`alembic/versions/20260420_0003_multitenancy.py`) 적용. 남은 3개 항목(SR1-15, SR5-3, SR5-6)은 C/C++ 메모리 취약점으로 현재 지원 언어 범위 밖.
+>
+> **다음 단계**: v0.6 이후의 작업은 [UPGRADE-PLAN Phase 1~4](./plan/UPGRADE-PLAN-unified-analysis.md) 로 통합 — CodeQL/ESLint 제거, Joern 도입, chord 오케스트레이션, Alembic `0004/0005` 마이그레이션.
 
 #### 6.1 룰 확대 (최우선)
 - **MOIS 49 → 40+ 커버 목표** (80% 이상)
@@ -537,3 +552,36 @@ Finding / Scan / AuditLog / SuppressionRule 에는 **복합 인덱스 · 단일 
 - v0.4.2 완료 시 "v0.4.2" 섹션을 `## 완료된 마일스톤` 으로 이동.
 - 새로운 gap 이 발견되면 3장 매트릭스에 추가 (심각도 표기 필수).
 - 우선순위 변경은 PR 에서 토론 후 문서 반영.
+- **아키텍처 결정**은 본 문서가 아니라 `docs/adr/` 에 ADR 로 기록하고, 본 문서 상단 "연관 문서" 에 링크.
+- **실행 계획**은 본 문서가 아니라 `docs/plan/` 에 UPGRADE-PLAN 으로 상세화하고, 본 문서 §4 버전 섹션에서 링크.
+- 본 문서는 **Gap 매트릭스 + 버전별 마일스톤 요약** 을 Single Source of Truth 로 유지한다. ADR/UPGRADE-PLAN 과 상충 시 본 문서 갱신 PR 을 함께 낸다.
+
+---
+
+## 8. ADR-0001 "결정 필요" 항목 확정 내역
+
+> UPGRADE-PLAN §11 말미의 5개 미결 사항에 대한 결정 (2026-04-24 기록).
+
+| # | 항목 | 결정 | 사유 요약 |
+|---|---|---|---|
+| 1 | SSE vs WebSocket | **SSE 전용 채택**, WebSocket 도입 자체 폐기 | 진행 이벤트는 단방향 push. SSE 의 `EventSource` 자동 재연결 + `Last-Event-ID` 재시작, HTTP/2 multiplex 로 충분. WebSocket 은 양방향 use case 확정 시 별도 ADR 로 재검토 |
+| 2 | Alembic `0004` downgrade | **가드된 DROP** (환경변수 `ALEMBIC_FORCE_DOWNGRADE=1` 필요) | 표준 Alembic 패턴 준수하되 우발 실행 차단. 백필된 `sources`/`dedup_key` 가 1M rows 규모일 때 재수행 60분 비용 방지 |
+| 3 | `worker-heavy` GPU vs CPU | **CPU 전용 `worker-heavy` + GPU 분리된 `worker-llm`** | 자원 프로파일 정반대(RAM-heavy vs VRAM-heavy), 스케일 축 다름(스캔당 1 vs finding당 N), 장애 격리 |
+| 4 | 카나리 라우팅 방식 | **Redis 키(`opensast:pipeline_v2:org_ids` SET)** | 일시적 플래그에 영구 컬럼 오염 방지. Admin API 로 즉시 SADD/SREM, audit_log 연동 용이 |
+| 5 | Joern 고정 버전 | **Phase 3 킥오프 주(T+9)에 v2.0.x 최신 stable 스냅샷** (ADR-0002) | Renovate 월간 patch bump + `rules/joern/` 회귀 스위트 강제. major 업그레이드는 별도 ADR |
+| 5b | **엔진 버전 거버넌스 일반화** | **3-Tier 정책 (ADR-0004 신설)** — Tier 1: Opengrep/Joern 엄격 고정 · Tier 2: SpotBugs 고정+스모크 · Tier 3: Bandit/gosec 상한+자동머지 | Joern 만 고정하고 나머지 방치하면 일관성 부재. 엔진별 룰 결합도·변동성·침투도에 따라 차등 정책 적용. Phase 3 Joern pilot → Phase 4 Opengrep 이식 → v1.0 전체 엔진 적용 |
+| 6 | Helm chart 배포 | **v1.0 GA 까지 in-tree (`deploy/helm/`)**, 이후 분리 검토 | 초기 차트-앱 버전 드리프트 방지. `chart-releaser-action` 으로 OCI registry 배포 가능 |
+
+### 엔진 버전 거버넌스 3-Tier 정책 상세 (§8 #5b)
+
+ADR-0004 로 정식화 예정인 정책의 요약:
+
+| Tier | 대상 엔진 | 버전 고정 | Renovate | 회귀 게이트 | 전용 ADR |
+|---|---|---|---|---|---|
+| **1** (엄격) | Opengrep, Joern | exact + SHA256 | patch 만 PR, 자동 머지 금지 | 골든 회귀 필수 | ✅ |
+| **2** (중간) | SpotBugs | exact + SHA256 | patch 자동 머지, minor 수동 | 스모크만 | 선택 |
+| **3** (유연) | Bandit, gosec | `>=X,<Y` 상한 | patch/minor 자동 머지 | 전체 테스트 수트 | ❌ |
+
+**SSOT**: `.env.versions` — 모든 엔진 버전 선언 집중 (신설 예정).
+**메타 API**: `GET /api/system/engines` — 사용자/감사관이 현재 실행 중인 엔진 버전·라이선스·Tier 조회 가능 (신설 예정).
+**CVE 대응**: 전 Tier 공통 — Renovate `vulnerabilityAlerts` 로 스케줄 무시 즉시 PR 생성.

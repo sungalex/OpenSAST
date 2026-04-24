@@ -168,6 +168,8 @@ ADR 의 §2.1 단일 진입점 → Phase 2. §2.2 병렬·큐 분리 → Phase 2
 
 **제거 엔진**. CodeQL 은 `opensast/engines/codeql.py`, `rules/codeql/`, `settings.codeql_bin`, 관련 테스트/문서 블록 전체 삭제. ESLint 는 `opensast/engines/eslint.py`, `settings.eslint_bin`, 관련 테스트 삭제 — Node.js 런타임 의존이 빠지므로 Dockerfile 의 Node 설치 라인 중 `eslint` 전용 부분은 제거(프런트엔드 빌드는 별도 이미지라 영향 없음).
 
+**엔진 버전 거버넌스 (3-Tier 정책 · ADR-0004)**. 엔진별 버전 관리 엄격도는 룰 결합도·CLI 변동성·파이프라인 침투도에 따라 3단계로 차등 적용한다. **Tier 1 (Opengrep, Joern)**: `.env.versions` 에 exact 버전 + SHA256 선언, Renovate 는 patch 만 PR 생성하며 자동 머지 금지, `tests/fixtures/golden/` 기반 회귀 스위트를 CI 게이트로 강제, 전용 ADR 발행. **Tier 2 (SpotBugs)**: 버전 핀 + SHA256 은 동일하게 요구하지만 회귀는 스모크 테스트 수준(기동·기본 detector 몇 개 실행 후 crash 없음 확인), Renovate patch 자동 머지 허용. **Tier 3 (Bandit, gosec)**: major 상한(`>=X,<Y`)만 설정, Renovate patch/minor 자동 머지, 별도 게이트 없이 기존 pytest 수트로 충분. 모든 Tier 공통으로 `vulnerabilityAlerts.enabled=true` 를 통해 CVE 발견 시 즉시 PR 생성하고 24시간 내 긴급 패치 프로세스를 가동한다. 단일 버전 선언 지점(`.env.versions`)과 메타 API(`GET /api/system/engines`)는 Phase 4 산출물로 구현하며, Tier 1 정책은 Phase 3 에서 Joern 으로 먼저 검증한 뒤 Phase 4 초에 Opengrep 에 이식한다. `opensast/engines/base.py::EngineMeta` 에 `license`, `versioning_tier: Literal["strict","moderate","flexible"]`, `upstream_repo` 필드를 도입해 모든 엔진이 자기 정책을 자기기술.
+
 ## 7. 오케스트레이션/인프라 변경
 
 **큐 정책**. `light` 큐는 `concurrency=4`, prefetch=4, Celery `worker-light` 서비스에 할당. `heavy` 큐는 `concurrency=1`, prefetch=1, `worker-heavy` 에 할당하고 컨테이너 mem_limit 10g·swappiness=0. `llm` 큐는 `concurrency=2`, Ollama 응답 지연을 고려해 prefetch=1.
@@ -227,10 +229,16 @@ ADR 의 §2.1 단일 진입점 → Phase 2. §2.2 병렬·큐 분리 → Phase 2
 
 총 소요 16주(약 4개월) 가이드. 각 Phase 말 금요일에 팀 리뷰와 KPI 보고.
 
-### 남은 결정 사항 (“결정 필요” 태그 모음)
+### 결정 사항 이력 (2026-04-24 확정)
 
-- SSE 만으로 진행 이벤트를 충분히 수용할 수 있는가, WebSocket 을 Phase 4 에 도입해야 하는가.
-- `0004` Alembic downgrade 를 실 DROP 으로 둘지 no-op 으로 둘지.
-- `worker-heavy` 에 GPU(Ollama 병용) 를 섞을지 CPU 전용으로 분리할지.
-- `organizations.pipeline_version` 신설 vs 환경변수로 카나리 라우팅 대체.
-- Joern 고정 버전(v2.0.x 라인 중 어느 패치) 최종 확정.
+원래 6개 "결정 필요" 태그였던 항목은 모두 [ROADMAP §8](../ROADMAP.md#8-adr-0001-결정-필요-항목-확정-내역) 에 최종 결정이 기록되었다. 요약:
+
+1. **SSE 전용 채택, WebSocket 도입 폐기** — 진행 이벤트는 단방향 push. 양방향 use case 발생 시 별도 ADR.
+2. **Alembic `0004` downgrade 는 가드된 DROP** — `ALEMBIC_FORCE_DOWNGRADE=1` 환경변수 필수.
+3. **CPU 전용 `worker-heavy` + GPU 분리된 `worker-llm`** — 자원 프로파일·실패 모드 격리.
+4. **카나리 라우팅은 Redis 키(`opensast:pipeline_v2:org_ids` SET)** — 영구 컬럼 오염 방지, Admin API 로 즉시 SADD/SREM.
+5. **Joern 버전은 Phase 3 T+9 에 v2.0.x 최신 stable 스냅샷 (ADR-0002)** — Renovate 월간 patch + 골든 회귀 강제.
+5b. **엔진 버전 거버넌스 3-Tier 정책 (ADR-0004 신설)** — Tier 1: Opengrep/Joern 엄격, Tier 2: SpotBugs 중간, Tier 3: Bandit/gosec 유연.
+6. **Helm chart 는 v1.0 GA 까지 in-tree (`deploy/helm/`)**, 이후 생태계 확산 시 `opensast-helm` 리포 분리 검토.
+
+상세 사유와 구현 가이드는 ROADMAP §8 과 각 ADR 문서 참조.
