@@ -60,3 +60,6 @@ opensast-report.html
 opensast-report.xlsx
 result.sarif
 result.json
+
+# Added by ggshield
+.cache_ggshield
