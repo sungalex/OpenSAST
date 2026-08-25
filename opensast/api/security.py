@@ -185,7 +185,7 @@ def blacklist_token(jti: str, ttl_seconds: int | None = None) -> None:
         settings = get_settings()
         r = redis.from_url(settings.redis_url)
         ttl = ttl_seconds or (settings.access_token_expire_minutes * 60)
-        r.setex(f"blacklist:{jti}", max(ttl, 1), "1")
+        r.set(f"blacklist:{jti}", "1", ex=max(ttl, 1))
     except Exception:
         pass  # Redis 장애 시 fail-open
 
@@ -212,7 +212,7 @@ def mark_refresh_consumed(jti: str, ttl_seconds: int = 7 * 86400) -> None:
         import redis
 
         r = redis.from_url(get_settings().redis_url)
-        r.setex(f"refresh_consumed:{jti}", ttl_seconds, "1")
+        r.set(f"refresh_consumed:{jti}", "1", ex=ttl_seconds)
     except Exception:
         pass
 

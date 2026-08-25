@@ -10,7 +10,8 @@
 라우트는 `ActorContext` 로 호출자 정보(user_id, role, ip) 를 전달한다.
 """
 
-from opensast.services.base import ActorContext, ServiceError
+from opensast.services.base import ActorContext, BaseService, ServiceError
+from opensast.services.dashboard_service import DashboardService
 from opensast.services.finding_service import FindingService
 from opensast.services.gate_service import GateService
 from opensast.services.project_service import ProjectService
@@ -20,7 +21,9 @@ from opensast.services.suppression_service import SuppressionService
 
 __all__ = [
     "ActorContext",
+    "BaseService",
     "ServiceError",
+    "DashboardService",
     "FindingService",
     "GateService",
     "ProjectService",

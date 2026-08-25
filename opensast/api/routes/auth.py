@@ -27,6 +27,12 @@ from opensast.api.security import (
 )
 from opensast.db import models, repo
 
+# starlette 는 `HTTP_422_UNPROCESSABLE_ENTITY` 를 `..._CONTENT` 로 대체하며
+# 전자를 deprecated 처리했다. 구버전 호환을 위해 존재하는 쪽을 고른다.
+_HTTP_422 = getattr(
+    status, "HTTP_422_UNPROCESSABLE_CONTENT", None
+) or status.HTTP_422_UNPROCESSABLE_ENTITY
+
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
@@ -208,7 +214,7 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db)) -> UserOut:
         validate_password_policy(payload.password)
     except PasswordPolicyError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=_HTTP_422,
             detail=str(exc),
         ) from exc
     user = models.User(

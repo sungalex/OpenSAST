@@ -1,28 +1,37 @@
-"""스캔 리포트 다운로드 라우트."""
+"""스캔 리포트 다운로드 라우트.
+
+리포트도 스캔 조회와 동일한 접근 검증을 거친다 — 예전에는 ORM 을 직접 호출해
+조직 스코핑을 우회했다 (C-2).
+"""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
-from opensast.api.deps import get_current_user, get_db
-from opensast.db import models, repo
+from opensast.api.deps import get_actor, get_db
 from opensast.reports import build_reports
+from opensast.services import ActorContext, FindingService, ScanService, ServiceError
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
+
+
+def _bundle(db: Session, actor: ActorContext, scan_id: str):
+    try:
+        scan = ScanService(db, actor).get(scan_id)
+        rows = FindingService(db, actor).for_scan(scan_id)
+    except ServiceError as exc:
+        raise exc.as_http() from exc
+    return build_reports(scan, rows)
 
 
 @router.get("/{scan_id}/sarif")
 def download_sarif(
     scan_id: str,
     db: Session = Depends(get_db),
-    _: models.User = Depends(get_current_user),
+    actor: ActorContext = Depends(get_actor),
 ) -> Response:
-    scan = db.get(models.Scan, scan_id)
-    if scan is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    rows = repo.list_findings_for_scan(db, scan_id)
-    bundle = build_reports(scan, rows)
+    bundle = _bundle(db, actor, scan_id)
     return Response(
         content=bundle.sarif_bytes,
         media_type="application/sarif+json",
@@ -34,13 +43,9 @@ def download_sarif(
 def download_html(
     scan_id: str,
     db: Session = Depends(get_db),
-    _: models.User = Depends(get_current_user),
+    actor: ActorContext = Depends(get_actor),
 ) -> Response:
-    scan = db.get(models.Scan, scan_id)
-    if scan is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    rows = repo.list_findings_for_scan(db, scan_id)
-    bundle = build_reports(scan, rows)
+    bundle = _bundle(db, actor, scan_id)
     return Response(content=bundle.html_bytes, media_type="text/html")
 
 
@@ -48,13 +53,9 @@ def download_html(
 def download_excel(
     scan_id: str,
     db: Session = Depends(get_db),
-    _: models.User = Depends(get_current_user),
+    actor: ActorContext = Depends(get_actor),
 ) -> Response:
-    scan = db.get(models.Scan, scan_id)
-    if scan is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    rows = repo.list_findings_for_scan(db, scan_id)
-    bundle = build_reports(scan, rows)
+    bundle = _bundle(db, actor, scan_id)
     return Response(
         content=bundle.excel_bytes,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

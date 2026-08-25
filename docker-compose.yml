@@ -47,15 +47,26 @@ services:
       redis:
         condition: service_healthy
     environment:
+      # 프로파일을 명시하지 않으면 local 기본값(CORS "*", docs 노출, rate limit off)
+      # 으로 뜬다. 컨테이너 배포는 반드시 docker 프로파일을 선언한다 (ADR-002).
+      OPENSAST_PROFILE: docker
       OPENSAST_DATABASE_URL: postgresql+psycopg2://opensast:opensast@postgres:5432/opensast
       OPENSAST_REDIS_URL: redis://redis:6379/0
       OPENSAST_CELERY_BROKER_URL: redis://redis:6379/1
       OPENSAST_CELERY_RESULT_BACKEND: redis://redis:6379/2
       OPENSAST_OLLAMA_HOST: http://ollama:11434
       OPENSAST_LLM_PROVIDER: ollama
-      OPENSAST_BOOTSTRAP_ADMIN_EMAIL: admin@opensast.local
-      OPENSAST_BOOTSTRAP_ADMIN_PASSWORD: opensast-admin
       OPENSAST_WORK_DIR: /var/opensast-work
+      # 경로 스캔은 작업 디렉터리 하위로만 허용한다 (워커 호스트 임의 파일 읽기 차단)
+      OPENSAST_SCAN_ALLOWED_SOURCE_ROOTS: /var/opensast-work
+      # --- 시크릿: 리터럴을 두지 않고 호스트/.env 값을 그대로 전달한다 ---
+      # compose 의 "이름만 적는" 형식은 값이 설정돼 있을 때만 컨테이너에 주입하고,
+      # 없으면 아예 주입하지 않는다(= 앱 기본값 적용). 파일에 예시 시크릿을 박아
+      # 두면 시크릿 스캐너가 잡을 뿐 아니라, 그 값이 그대로 운영에 흘러가기 쉽다.
+      # 값 지정: .env 또는 셸 환경변수 (`.env.example` 참조)
+      OPENSAST_SECRET_KEY: ${OPENSAST_SECRET_KEY:-}
+      OPENSAST_BOOTSTRAP_ADMIN_EMAIL: ${OPENSAST_BOOTSTRAP_ADMIN_EMAIL:-}
+      OPENSAST_BOOTSTRAP_ADMIN_PASSWORD: ${OPENSAST_BOOTSTRAP_ADMIN_PASSWORD:-}
     ports:
       - "8000:8000"
     volumes:
@@ -69,12 +80,23 @@ services:
       - redis
       - postgres
     environment:
+      OPENSAST_PROFILE: docker
       OPENSAST_DATABASE_URL: postgresql+psycopg2://opensast:opensast@postgres:5432/opensast
+      # 워커에도 REDIS_URL 이 필요하다. 없으면 triage 캐시가 localhost 로 붙으려다
+      # 매번 실패하고, 그 실패가 조용히 삼켜져 캐시가 통째로 죽는다.
+      OPENSAST_REDIS_URL: redis://redis:6379/0
       OPENSAST_CELERY_BROKER_URL: redis://redis:6379/1
       OPENSAST_CELERY_RESULT_BACKEND: redis://redis:6379/2
       OPENSAST_LLM_PROVIDER: ollama
       OPENSAST_OLLAMA_HOST: http://ollama:11434
       OPENSAST_WORK_DIR: /var/opensast-work
+      OPENSAST_SCAN_ALLOWED_SOURCE_ROOTS: /var/opensast-work
+      # --- 시크릿: 리터럴을 두지 않고 호스트/.env 값을 그대로 전달한다 ---
+      # compose 의 "이름만 적는" 형식은 값이 설정돼 있을 때만 컨테이너에 주입하고,
+      # 없으면 아예 주입하지 않는다(= 앱 기본값 적용). 파일에 예시 시크릿을 박아
+      # 두면 시크릿 스캐너가 잡을 뿐 아니라, 그 값이 그대로 운영에 흘러가기 쉽다.
+      # 값 지정: .env 또는 셸 환경변수 (`.env.example` 참조)
+      OPENSAST_SECRET_KEY: ${OPENSAST_SECRET_KEY:-}
     volumes:
       - ./rules:/app/rules:ro
       - ./.opensast-work:/var/opensast-work

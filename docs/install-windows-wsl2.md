@@ -1,5 +1,8 @@
 # Windows 에서 OpenSAST 실행하기 (WSL2 + Docker Desktop)
 
+> Windows 전용 설치 안내입니다. 일반 설치는 [`guide/getting-started.md`](guide/getting-started.md), 전체 목차는 [`guide/README.md`](guide/README.md).
+
+
 > OpenSAST 는 Windows 네이티브를 **공식 지원하지 않습니다**. 주요 분석 엔진
 > (Semgrep/Opengrep)이 Windows 용 wheel 을 제공하지 않고, WeasyPrint 가
 > GTK3 런타임을 요구하는 등 네이티브 설치가 복잡하기 때문입니다.

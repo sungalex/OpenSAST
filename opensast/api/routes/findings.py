@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from opensast.api.deps import get_current_user, get_db
+from opensast.api.deps import WRITE_ROLES, get_actor, get_db, require_actor
 from opensast.api.schemas import (
     FindingOut,
     FindingStatusUpdate,
@@ -20,14 +20,6 @@ from opensast.services import ActorContext, FindingService, ServiceError
 router = APIRouter(prefix="/api/findings", tags=["findings"])
 
 
-def _actor(request: Request, user: models.User) -> ActorContext:
-    return ActorContext(
-        user=user,
-        ip=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent"),
-    )
-
-
 # ---------------------------------------------------------------------------
 # 조회
 # ---------------------------------------------------------------------------
@@ -36,10 +28,12 @@ def _actor(request: Request, user: models.User) -> ActorContext:
 @router.get("/scan/{scan_id}", response_model=list[FindingOut])
 def list_findings(
     scan_id: str,
+    limit: int | None = Query(None, ge=1, le=20000),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
+    actor: ActorContext = Depends(get_actor),
 ) -> list[FindingOut]:
-    rows = FindingService(db).for_scan(scan_id)
+    rows = FindingService(db, actor).for_scan(scan_id, limit=limit, offset=offset)
     return [_finding_to_out(r) for r in rows]
 
 
@@ -64,9 +58,9 @@ def search_findings(
     limit: int = Query(200, ge=1, le=2000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
+    actor: ActorContext = Depends(get_actor),
 ) -> list[FindingOut]:
-    rows = FindingService(db).search(
+    rows = FindingService(db, actor).search(
         scan_id=scan_id,
         project_id=project_id,
         severity=severity,
@@ -93,11 +87,10 @@ def search_findings(
 def update_status(
     finding_id: int,
     payload: FindingStatusUpdate,
-    request: Request,
     db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
+    actor: ActorContext = Depends(require_actor(*WRITE_ROLES)),
 ) -> FindingOut:
-    svc = FindingService(db, _actor(request, user))
+    svc = FindingService(db, actor)
     try:
         row = svc.change_status(
             finding_id, new_status=payload.status, reason=payload.reason
@@ -116,7 +109,7 @@ def update_status(
 def natural_language_search(
     payload: NlQuery,
     db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
+    actor: ActorContext = Depends(get_actor),
 ) -> list[FindingOut]:
     import json
     import re
@@ -139,7 +132,7 @@ def natural_language_search(
     except (LLMError, Exception):  # noqa: BLE001
         parsed = _keyword_fallback(payload.query)
 
-    rows = FindingService(db).search(
+    rows = FindingService(db, actor).search(
         scan_id=payload.scan_id,
         project_id=payload.project_id,
         severity=parsed.get("severity"),
@@ -158,10 +151,10 @@ def natural_language_search(
 def get_finding(
     finding_id: int,
     db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
+    actor: ActorContext = Depends(get_actor),
 ) -> FindingOut:
     try:
-        row = FindingService(db).get(finding_id)
+        row = FindingService(db, actor).get(finding_id)
     except ServiceError as exc:
         raise exc.as_http() from exc
     return _finding_to_out(row)

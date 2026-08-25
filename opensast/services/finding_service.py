@@ -32,14 +32,46 @@ _ADMIN_TRANSITIONS: dict[str, set[str]] = {
 
 
 class FindingService(BaseService):
+    # ---- 접근 검증 ----------------------------------------------------
+    def _assert_scan_access(self, scan_id: str) -> models.Scan:
+        """스캔이 호출자의 조직에 속하는지 검증한다.
+
+        Finding 조회는 예전에 스코핑 없이 열려 있었다 (C-2). 조회 진입점마다
+        이 검증을 통과하도록 해 교차 조직 열람을 막는다.
+        """
+
+        scan = self.session.get(models.Scan, scan_id)
+        if scan is None:
+            raise ServiceError(
+                "scan not found", status_code=status.HTTP_404_NOT_FOUND
+            )
+        if not self.actor.is_system:
+            project = self.session.get(models.Project, scan.project_id)
+            if project is None:
+                raise ServiceError(
+                    "scan not found", status_code=status.HTTP_404_NOT_FOUND
+                )
+            self._assert_org(project, label="scan")
+        return scan
+
     # ---- 조회 --------------------------------------------------------
-    def for_scan(self, scan_id: str) -> list[models.Finding]:
-        return repo.list_findings_for_scan(self.session, scan_id)
+    def for_scan(
+        self, scan_id: str, *, limit: int | None = None, offset: int = 0
+    ) -> list[models.Finding]:
+        self._assert_scan_access(scan_id)
+        return repo.list_findings_for_scan(
+            self.session, scan_id, limit=limit, offset=offset
+        )
+
+    def count_for_scan(self, scan_id: str) -> int:
+        self._assert_scan_access(scan_id)
+        return repo.count_findings_for_scan(self.session, scan_id)
 
     def get(self, finding_id: int) -> models.Finding:
         row = self.session.get(models.Finding, finding_id)
         if row is None:
             raise ServiceError("finding not found", status_code=status.HTTP_404_NOT_FOUND)
+        self._assert_scan_access(row.scan_id)
         return row
 
     # ---- 검색 --------------------------------------------------------
@@ -69,15 +101,16 @@ class FindingService(BaseService):
         filters = []
         if scan_id:
             filters.append(models.Finding.scan_id == scan_id)
-        # org scoping: project_id 가 지정되지 않아도 조직 필터 적용
-        org_id = self.actor.organization_id if self.actor else None
-        if project_id is not None or org_id is not None:
-            stmt = stmt.join(models.Scan)
+        # 조직 스코핑은 **항상** 적용한다. system 컨텍스트(CLI/워커)만 우회하며,
+        # 그 경우에도 project_id 필터는 그대로 동작한다.
+        if not self.actor.is_system:
+            stmt = stmt.join(models.Scan).join(models.Project)
+            filters.append(self._org_filter(models.Project))
             if project_id is not None:
                 filters.append(models.Scan.project_id == project_id)
-            if org_id is not None:
-                stmt = stmt.join(models.Project)
-                filters.append(models.Project.organization_id == org_id)
+        elif project_id is not None:
+            stmt = stmt.join(models.Scan)
+            filters.append(models.Scan.project_id == project_id)
         if severity:
             filters.append(
                 models.Finding.severity.in_([s.upper() for s in severity])
@@ -119,13 +152,15 @@ class FindingService(BaseService):
                         ),
                     )
                 )
-            except Exception:
-                pass  # 잘못된 cursor는 무시, 첫 페이지로 폴백
+            except (ValueError, KeyError, TypeError) as exc:
+                raise ServiceError(
+                    "잘못된 cursor 값입니다", status_code=status.HTTP_400_BAD_REQUEST
+                ) from exc
         if filters:
             stmt = stmt.where(and_(*filters))
         stmt = (
             stmt.order_by(
-                models.Finding.severity.asc(),
+                models.severity_order(),
                 models.Finding.created_at.desc(),
             )
             .offset(offset)

@@ -17,11 +17,7 @@ class GateService(BaseService):
             raise ServiceError(
                 "project not found", status_code=status.HTTP_404_NOT_FOUND
             )
-        org_id = self.actor.organization_id if self.actor else None
-        if org_id is not None and project.organization_id != org_id:
-            raise ServiceError(
-                "project not found", status_code=status.HTTP_404_NOT_FOUND
-            )
+        self._assert_org(project, label="project")
         return project
 
     def upsert_policy(

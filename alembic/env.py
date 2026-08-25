@@ -25,9 +25,16 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# OpenSAST 설정에서 DB URL 주입
-_settings = get_settings()
-config.set_main_option("sqlalchemy.url", _settings.database_url)
+# DB URL 결정 우선순위:
+#   1. 호출자가 명시한 값 (프로그램적 Config, `-x`, alembic.ini 수정)
+#   2. OpenSAST 설정 (`OPENSAST_DATABASE_URL` 등)
+#
+# 예전에는 무조건 2번으로 덮어써서, 호출자가 URL 을 지정해도 무시됐다.
+# 그 결과 마이그레이션을 다른 DB 로 돌리거나 테스트하는 것이 불가능했다.
+_INI_PLACEHOLDER = "driver://user:pass@localhost/dbname"
+_configured_url = config.get_main_option("sqlalchemy.url", "")
+if not _configured_url or _configured_url == _INI_PLACEHOLDER:
+    config.set_main_option("sqlalchemy.url", get_settings().database_url)
 
 target_metadata = Base.metadata
 

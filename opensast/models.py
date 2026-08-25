@@ -135,6 +135,9 @@ class ScanResult:
     findings: list[Finding]
     engine_stats: dict[str, int]
     mois_coverage: dict[str, int]
+    #: 사용자에게 보여야 할 부분 성공/생략 사실. 조용한 축소를 막기 위한 채널이다
+    #: (2차 Pass 생략, triage 상한 초과 등).
+    notes: list[str] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -144,5 +147,6 @@ class ScanResult:
             "finished_at": self.finished_at.isoformat(),
             "engine_stats": self.engine_stats,
             "mois_coverage": self.mois_coverage,
+            "notes": list(self.notes),
             "findings": [f.as_dict() for f in self.findings],
         }

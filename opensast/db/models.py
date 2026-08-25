@@ -13,6 +13,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     JSON,
+    case,
     DateTime,
     ForeignKey,
     Index,
@@ -23,7 +24,17 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from opensast.db.base import Base, TimestampMixin
+from opensast.db.base import Base, TimestampMixin, utcnow
+
+#: severity 문자열의 논리적 순서. 알파벳 정렬은 HIGH → LOW → MEDIUM 이 되어
+#: MEDIUM 이 LOW 뒤로 밀리므로, 정렬에는 항상 이 CASE 식을 쓴다.
+SEVERITY_RANK: dict[str, int] = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
+
+
+def severity_order():
+    """severity 를 HIGH → MEDIUM → LOW 순으로 정렬하는 SQL 식."""
+
+    return case(SEVERITY_RANK, value=Finding.severity, else_=99)
 
 
 class Organization(Base, TimestampMixin):
@@ -123,6 +134,11 @@ class Finding(Base, TimestampMixin):
         Index("ix_findings_scan_severity_status", "scan_id", "severity", "status"),
         Index("ix_findings_mois_id", "mois_id"),
         Index("ix_findings_finding_hash", "finding_hash"),
+        # 저장 멱등성 (H-5): Celery 재시도로 같은 스캔이 다시 실행돼도
+        # Finding 이 중복 삽입되지 않도록 DB 차원에서 못 박는다.
+        # SQLite 호환을 위해 제약이 아니라 유니크 인덱스로 선언한다
+        # (alembic 0004 리비전과 동일한 형태).
+        Index("uq_findings_scan_hash", "scan_id", "finding_hash", unique=True),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -264,5 +280,5 @@ class AuditLog(Base):
     detail: Mapped[dict] = mapped_column(JSON, default=dict)
     ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, nullable=False
     )

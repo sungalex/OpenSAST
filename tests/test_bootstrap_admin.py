@@ -11,6 +11,8 @@ from opensast.db import repo
 from opensast.db.base import Base
 from opensast.db.models import User
 
+from tests._credentials import make_test_password
+
 
 def _make_session():
     engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
@@ -20,9 +22,10 @@ def _make_session():
 
 
 def test_bootstrap_admin_creates_once() -> None:
+    password = make_test_password("boot-a")
     settings = Settings(
         bootstrap_admin_email="bootstrap@example.com",
-        bootstrap_admin_password="pw-supersecret",
+        bootstrap_admin_password=password,
     )
     session = _make_session()
     try:
@@ -30,7 +33,7 @@ def test_bootstrap_admin_creates_once() -> None:
         session.commit()
         assert user.role == "admin"
         assert user.is_active is True
-        assert verify_password("pw-supersecret", user.hashed_password)
+        assert verify_password(password, user.hashed_password)
 
         # 이미 존재 → 동일 인스턴스 재사용, 새로 생성되지 않음
         again = repo.ensure_bootstrap_admin(session, settings=settings)
@@ -41,16 +44,17 @@ def test_bootstrap_admin_creates_once() -> None:
 
 
 def test_bootstrap_admin_does_not_overwrite_existing() -> None:
+    password = make_test_password("boot-b")
     settings = Settings(
         bootstrap_admin_email="preexisting@example.com",
-        bootstrap_admin_password="new-pw",
+        bootstrap_admin_password=password,
     )
     session = _make_session()
     try:
         session.add(
             User(
                 email="preexisting@example.com",
-                hashed_password="sentinel",
+                hashed_password="not-a-real-hash",
                 display_name="Original",
                 role="analyst",
                 is_active=True,
@@ -59,7 +63,7 @@ def test_bootstrap_admin_does_not_overwrite_existing() -> None:
         session.commit()
 
         user = repo.ensure_bootstrap_admin(session, settings=settings)
-        assert user.hashed_password == "sentinel"
+        assert user.hashed_password == "not-a-real-hash"
         assert user.role == "analyst"
     finally:
         session.close()
