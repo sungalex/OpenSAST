@@ -133,3 +133,9 @@ rules:
 - Timestamps are timezone-aware UTC everywhere.
 - Failures are isolated per unit (per engine, per finding) and **logged** —
   never swallowed with a bare `except: pass`.
+- Test credentials are **generated at runtime** (`tests/_credentials.py`), never
+  written as literals. Do not put a quoted string on a line that also names a
+  `*_PASSWORD`-style identifier — secret scanners match on that shape.
+- `tests/test_engine_integration.py` and `tests/vulnerable-samples/` contain
+  **deliberately vulnerable** code used to verify the detection rules. Never
+  "fix" them. Scanner exceptions for them live in `.gitguardian.yaml`.

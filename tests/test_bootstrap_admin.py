@@ -22,7 +22,7 @@ def _make_session():
 
 
 def test_bootstrap_admin_creates_once() -> None:
-    password = make_test_password("boot-a")
+    password = make_test_password()
     settings = Settings(
         bootstrap_admin_email="bootstrap@example.com",
         bootstrap_admin_password=password,
@@ -44,7 +44,7 @@ def test_bootstrap_admin_creates_once() -> None:
 
 
 def test_bootstrap_admin_does_not_overwrite_existing() -> None:
-    password = make_test_password("boot-b")
+    password = make_test_password()
     settings = Settings(
         bootstrap_admin_email="preexisting@example.com",
         bootstrap_admin_password=password,
