@@ -1,8 +1,12 @@
-"""기동 시 누락 컬럼 자동 추가.
+"""기동 시 누락 컬럼 자동 추가 — **개발 전용 fallback**.
 
-운영 환경에서는 Alembic 마이그레이션을 사용하는 것이 정석이지만, 본 도구의
-초기 단계에서는 모델 변경이 잦아 이를 따라잡기 어렵다. 본 헬퍼는 SQLAlchemy
-inspector 로 모델과 실제 DB 컬럼을 비교해 누락된 컬럼을 자동 ALTER TABLE 한다.
+정식 스키마 진실의 원천은 `alembic/versions/` 이며, 프로덕션은
+`alembic upgrade head` 로만 스키마를 변경한다. 이 헬퍼는 모델 변경이 잦은
+개발 단계의 편의 장치이며, `Settings.auto_migrate_on_startup` 이 True 일 때만
+호출된다 (cloud 프로파일 기본값 False).
+
+SQLAlchemy inspector 로 모델과 실제 DB 컬럼을 비교해 누락된 컬럼을 자동
+ALTER TABLE 한다.
 
 지원 대상:
   * 신규 컬럼 추가 (NULLABLE 또는 default 가 있는 경우만)
@@ -12,7 +16,8 @@ inspector 로 모델과 실제 DB 컬럼을 비교해 누락된 컬럼을 자동
   * 컬럼 이름 변경, 타입 변경, 컬럼 삭제
   * 인덱스/제약조건 변경
 
-이러한 변경이 필요해지면 Alembic 도입 시점이다.
+컬럼 삭제·이름 변경·제약조건 변경은 지원하지 않으므로, 이 헬퍼에만 의존하면
+스키마 드리프트가 누적된다. 반드시 대응하는 Alembic 리비전을 함께 작성한다.
 """
 
 from __future__ import annotations

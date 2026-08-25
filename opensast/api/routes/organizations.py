@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from opensast.api.deps import get_db, require_role
+from opensast.api.deps import get_current_user, get_db, require_role
 from opensast.db import models
 
 router = APIRouter(prefix="/api/organizations", tags=["organizations"])
@@ -38,7 +38,10 @@ def create_org(
 
 
 @router.get("")
-def list_orgs(db: Session = Depends(get_db)):
+def list_orgs(
+    db: Session = Depends(get_db),
+    _: models.User = Depends(get_current_user),
+):
     orgs = list(
         db.scalars(select(models.Organization).order_by(models.Organization.id))
     )
@@ -49,7 +52,11 @@ def list_orgs(db: Session = Depends(get_db)):
 
 
 @router.get("/{org_id}")
-def get_org(org_id: int, db: Session = Depends(get_db)):
+def get_org(
+    org_id: int,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(get_current_user),
+):
     org = db.get(models.Organization, org_id)
     if org is None:
         raise HTTPException(status_code=404, detail="organization not found")

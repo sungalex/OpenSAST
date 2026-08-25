@@ -19,6 +19,29 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from tests._credentials import ANALYST_PASSWORD, VIEWER_PASSWORD
+
+
+@pytest.fixture(autouse=True)
+def isolate_from_dotenv(monkeypatch):
+    """테스트를 리포지토리 `.env` 로부터 격리한다.
+
+    `Settings` 는 `SettingsConfigDict(env_file=".env")` 로 선언돼 있어, 개발자가
+    로컬에 둔 `.env` 값이 테스트 결과를 바꾼다. 실제로 `.env` 에
+    `OPENSAST_LLM_PROVIDER` 가 있으면 오버레이 테스트가 실패했다 — 제품 동작은
+    정상(환경변수가 오버레이보다 우선)인데 테스트만 환경에 의존한 것이다.
+
+    테스트는 개발자 머신 상태와 무관하게 같은 결과를 내야 하므로 여기서 끊는다.
+    `.env` 자체의 로딩을 검증하려면 이 픽스처를 명시적으로 되돌리고 쓴다.
+    """
+
+    from opensast.config import Settings, reset_settings_cache
+
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
+    reset_settings_cache()
+    yield
+    reset_settings_cache()
+
 
 @pytest.fixture
 def fixtures_dir() -> Path:
@@ -180,8 +203,8 @@ def analyst_user(client: TestClient, admin_headers: dict[str, str]) -> dict:
         headers=admin_headers,
         json={
             "email": "analyst@opensast.local",
-            # 정책 준수: 12자 이상, upper+lower+digit+special 중 3종 이상
-            "password": "AnalystPass#1",
+            # 정책 준수 값을 실행 시 생성한다 (소스에 비밀번호 리터럴을 두지 않음)
+            "password": ANALYST_PASSWORD,
             "display_name": "Tester",
             "role": "analyst",
         },
@@ -192,12 +215,58 @@ def analyst_user(client: TestClient, admin_headers: dict[str, str]) -> dict:
 
 @pytest.fixture
 def analyst_token(client: TestClient, analyst_user: dict) -> str:
-    return _login(client, "analyst@opensast.local", "AnalystPass#1")
+    return _login(client, "analyst@opensast.local", ANALYST_PASSWORD)
 
 
 @pytest.fixture
 def analyst_headers(analyst_token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {analyst_token}"}
+
+
+@pytest.fixture
+def viewer_user(client: TestClient, admin_headers: dict[str, str]) -> dict:
+    """viewer 역할 사용자 생성 — 조회만 가능해야 한다."""
+
+    r = client.post(
+        "/api/auth/users",
+        headers=admin_headers,
+        json={
+            "email": "viewer@opensast.local",
+            "password": VIEWER_PASSWORD,
+            "display_name": "Viewer",
+            "role": "viewer",
+        },
+    )
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+@pytest.fixture
+def viewer_headers(client: TestClient, viewer_user: dict) -> dict[str, str]:
+    token = _login(client, "viewer@opensast.local", VIEWER_PASSWORD)
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def allowed_scan_root(tmp_path, monkeypatch):
+    """`OPENSAST_SCAN_ALLOWED_SOURCE_ROOTS` 를 임시 경로로 지정한다.
+
+    기본 구성에서 경로 스캔은 `work_dir` 하위만 허용되므로, 경로 큐잉을 검증하는
+    테스트는 허용 루트를 명시해야 한다.
+    """
+
+    from opensast.config import reset_settings_cache
+
+    root = tmp_path / "allowed"
+    target = root / "proj"
+    target.mkdir(parents=True)
+    monkeypatch.setenv("OPENSAST_SCAN_ALLOWED_SOURCE_ROOTS", str(root))
+    reset_settings_cache()
+    try:
+        yield target
+    finally:
+        monkeypatch.delenv("OPENSAST_SCAN_ALLOWED_SOURCE_ROOTS", raising=False)
+        reset_settings_cache()
 
 
 # ---------------------------------------------------------------------------

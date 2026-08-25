@@ -18,6 +18,7 @@ class RuleSetService(BaseService):
         row = self.session.get(models.RuleSet, rule_set_id)
         if row is None:
             raise ServiceError("rule set not found", status_code=status.HTTP_404_NOT_FOUND)
+        self._assert_org(row, label="rule set")
         return row
 
     def create(
@@ -43,7 +44,7 @@ class RuleSetService(BaseService):
                 select(models.RuleSet).where(models.RuleSet.is_default.is_(True))
             ):
                 existing.is_default = False
-        org_id = self.actor.organization_id if self.actor else None
+        org_id = self.actor.organization_id
         row = models.RuleSet(
             name=name,
             description=description,

@@ -12,6 +12,9 @@ Python 하드코딩된 기본 카탈로그 위에 YAML 파일을 **merge** 할 �
 1. 내장 Python 카탈로그 (`catalog.py::MOIS_ITEMS`)
 2. (선택) `OPENSAST_MOIS_CATALOG_PATH` YAML — 동일 ID 덮어쓰기, 신규 ID 추가
 3. (선택) `OPENSAST_REFERENCE_STANDARDS_PATH` YAML — CWE→표준 매핑 병합
+
+개별 경로를 지정하지 않아도 `OPENSAST_CUSTOM_RESOURCES_DIR` 아래
+`mois_catalog.yaml` / `reference_standards.yaml` 이 있으면 자동 적용된다.
 """
 
 from __future__ import annotations
@@ -38,13 +41,13 @@ def load_mois_catalog() -> list[MoisItem]:
 
     base: dict[str, MoisItem] = {item.id: item for item in MOIS_ITEMS}
     settings = get_settings()
-    override_path = settings.mois_catalog_path
+    override_path = settings.resolved_mois_catalog_path()
     if override_path and Path(override_path).exists():
         try:
             data = yaml.safe_load(Path(override_path).read_text(encoding="utf-8"))
         except Exception as exc:  # noqa: BLE001
             log.warning("failed to load MOIS override %s: %s", override_path, exc)
-            return list(base.values())
+            return [base[k] for k in sorted(base)]
         for raw in data.get("items", []) or []:
             try:
                 item = _item_from_dict(raw)
@@ -57,7 +60,8 @@ def load_mois_catalog() -> list[MoisItem]:
                 continue
             base[item.id] = item
             log.info("MOIS override loaded: %s", item.id)
-    return list(base.values())
+    # 결과 순서를 ID 로 고정해 재현성을 보장한다 (P5)
+    return [base[k] for k in sorted(base)]
 
 
 def _item_from_dict(raw: dict[str, Any]) -> MoisItem:
@@ -82,7 +86,7 @@ def load_reference_overlay() -> dict[str, list[dict[str, str]]]:
     """
 
     settings = get_settings()
-    path = settings.reference_standards_path
+    path = settings.resolved_reference_standards_path()
     if not path or not Path(path).exists():
         return {}
     try:

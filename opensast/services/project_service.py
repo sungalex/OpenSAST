@@ -25,7 +25,7 @@ class ProjectService(BaseService):
             raise ServiceError(
                 "project name already used", status_code=status.HTTP_409_CONFLICT
             )
-        org_id = self.actor.organization_id if self.actor else None
+        org_id = self.actor.organization_id
         project = repo.create_project(
             self.session,
             name=name,
@@ -53,7 +53,5 @@ class ProjectService(BaseService):
         project = self.session.get(models.Project, project_id)
         if project is None:
             raise ServiceError("project not found", status_code=status.HTTP_404_NOT_FOUND)
-        org_id = self.actor.organization_id if self.actor else None
-        if org_id is not None and project.organization_id != org_id:
-            raise ServiceError("project not found", status_code=status.HTTP_404_NOT_FOUND)
+        self._assert_org(project, label="project")
         return project

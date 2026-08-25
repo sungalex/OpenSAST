@@ -18,7 +18,7 @@ from opensast.engines.eslint import EslintEngine
 from opensast.engines.gosec import GosecEngine
 from opensast.engines.opengrep import OpengrepEngine
 from opensast.engines.spotbugs import SpotbugsEngine
-from opensast.plugins.registry import engine_registry
+from opensast.plugins.registry import PluginError, engine_registry
 
 # ---------------------------------------------------------------------------
 # 내장 엔진을 플러그인 레지스트리에 등록 (priority=100 = 내장 기본값)
@@ -49,13 +49,22 @@ class EngineAvailability:
     available: bool
 
 
+class UnknownEngine(KeyError):
+    """등록되지 않은 엔진 이름."""
+
+
 def build_engine(name: str, settings: Settings | None = None) -> Engine:
-    """플러그인 레지스트리에서 엔진 인스턴스 생성."""
+    """플러그인 레지스트리에서 엔진 인스턴스 생성.
+
+    레지스트리는 `PluginError(RuntimeError)` 를 던지는데 예전에는 `KeyError` 로
+    잡으려 해서 이 경로가 죽어 있었고, 잘못된 엔진 이름 하나가 스캔 전체를
+    크래시시켰다 (H-4). 두 예외를 모두 받아 `UnknownEngine` 으로 통일한다.
+    """
 
     try:
         plugin = engine_registry.get(name)
-    except KeyError as exc:
-        raise KeyError(f"unknown engine: {name}") from exc
+    except (KeyError, PluginError) as exc:
+        raise UnknownEngine(f"unknown engine: {name}") from exc
     return plugin.factory(settings=settings)
 
 
