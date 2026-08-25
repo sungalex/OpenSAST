@@ -1,7 +1,7 @@
 """대시보드 통계 엔드포인트 — DashboardService 위임.
 
 집계도 다른 조회와 동일하게 서비스 계층을 지나며, 따라서 동일한 조직 스코핑을
-적용받는다 (ADR-001).
+적용받는다 (ADR-0005).
 """
 
 from __future__ import annotations

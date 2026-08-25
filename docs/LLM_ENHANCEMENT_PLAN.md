@@ -8,10 +8,10 @@
 > **별개 축**이라 "Phase 2" 가 두 문서에서 다른 것을 가리키는 혼란이 있었다.
 >
 > 살아 있는 항목은 [`ROADMAP.md`](ROADMAP.md) 로 옮겼고, 동시 실행·캐시·상한에
-> 대한 실제 결정은 [ADR-0004](adr/0004-triage-concurrency.md) 에 있다.
+> 대한 실제 결정은 [ADR-0008](adr/0008-triage-concurrency.md) 에 있다.
 > 현재 triage 동작은 [`guide/llm-triage.md`](guide/llm-triage.md) 를 보라.
 >
-> 동결 근거는 [ADR-0003](adr/0003-documentation-architecture.md).
+> 동결 근거는 [ADR-0007](adr/0007-documentation-architecture.md).
 
 ---
 

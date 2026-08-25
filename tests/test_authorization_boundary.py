@@ -1,4 +1,4 @@
-"""인가 경계 회귀 테스트 (ADR-001).
+"""인가 경계 회귀 테스트 (ADR-0005).
 
 이 파일이 검증하는 실패 모드는 전부 실제로 존재했던 것이다.
 
@@ -247,6 +247,10 @@ def two_orgs(db_engine, client: TestClient, admin_headers: dict[str, str]):
         return {
             "scan_a": scan_a.id,
             "project_a": project_a.id,
+            "org_a": org_a.id,
+            "org_b": org_b.id,
+            "user_a": users["a"].id,
+            "user_b": users["b"].id,
         }
     finally:
         session.close()
@@ -326,3 +330,116 @@ def test_cross_org_project_scan_list_is_blocked(
 
 def test_organizations_list_requires_auth(client: TestClient) -> None:
     assert client.get("/api/organizations").status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# 감사 로그 조직 격리 (ADR-0005 후속 — 최초 반영에서 누락됐던 라우트)
+# ---------------------------------------------------------------------------
+
+
+def test_audit_log_records_organization(
+    client: TestClient, db_engine, two_orgs: dict
+) -> None:
+    """로그인 감사 로그에 조직이 귀속돼야 한다.
+
+    예전에는 `repo.record_audit` 이 `organization_id` 를 아예 채우지 않아
+    모든 행이 NULL 이었다. 그러면 조회에 조직 필터를 걸 근거 자체가 없다.
+    """
+
+    from opensast.db import models
+
+    _org_headers(client, "a")  # 로그인 → auth.login 감사 기록
+
+    Session_ = sessionmaker(bind=db_engine, autoflush=False, future=True)
+    session = Session_()
+    try:
+        rows = [
+            r
+            for r in session.query(models.AuditLog).all()
+            if r.user_id == two_orgs["user_a"]
+        ]
+        assert rows, "조직 A 사용자의 감사 로그가 없다"
+        assert all(r.organization_id == two_orgs["org_a"] for r in rows)
+    finally:
+        session.close()
+
+
+def test_cross_org_audit_logs_are_not_visible(
+    client: TestClient, two_orgs: dict
+) -> None:
+    """조직 A 의 admin 이 조직 B 의 감사 로그를 읽을 수 없어야 한다."""
+
+    headers_a = _org_headers(client, "a")
+    _org_headers(client, "b")  # 조직 B 감사 로그 생성
+
+    r = client.get("/api/admin/audit", headers=headers_a, params={"limit": 1000})
+    assert r.status_code == 200, r.text
+    user_ids = {row["user_id"] for row in r.json()}
+    assert two_orgs["user_b"] not in user_ids
+    assert two_orgs["user_a"] in user_ids
+
+
+def test_audit_requires_admin_role(
+    client: TestClient, analyst_headers: dict[str, str]
+) -> None:
+    assert client.get("/api/admin/audit", headers=analyst_headers).status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# 조직 레지스트리 열거 차단
+# ---------------------------------------------------------------------------
+
+
+def test_org_user_sees_only_own_organization(
+    client: TestClient, two_orgs: dict
+) -> None:
+    """조직 소속 사용자는 다른 테넌트를 열거할 수 없어야 한다."""
+
+    r = client.get("/api/organizations", headers=_org_headers(client, "a"))
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert [o["id"] for o in body] == [two_orgs["org_a"]]
+
+
+def test_cross_org_organization_detail_is_404(
+    client: TestClient, two_orgs: dict
+) -> None:
+    """존재 여부를 노출하지 않도록 403 이 아니라 404 로 막는다."""
+
+    r = client.get(
+        f"/api/organizations/{two_orgs['org_b']}", headers=_org_headers(client, "a")
+    )
+    assert r.status_code == 404
+
+
+def test_org_scoped_admin_cannot_create_organization(
+    client: TestClient, two_orgs: dict
+) -> None:
+    """테넌트 admin 은 새 테넌트를 만들 수 없다 — 플랫폼 관리자 권한이다."""
+
+    r = client.post(
+        "/api/organizations",
+        headers=_org_headers(client, "a"),
+        json={"slug": "org-c", "name": "C"},
+    )
+    assert r.status_code == 403
+
+
+def test_platform_admin_sees_all_organizations(
+    client: TestClient, admin_headers: dict[str, str], two_orgs: dict
+) -> None:
+    """조직 미지정 admin(= 플랫폼 관리자)은 전체 레지스트리를 본다."""
+
+    r = client.get("/api/organizations", headers=admin_headers)
+    assert r.status_code == 200, r.text
+    ids = {o["id"] for o in r.json()}
+    assert {two_orgs["org_a"], two_orgs["org_b"]} <= ids
+
+
+def test_organization_create_rejects_missing_fields(
+    client: TestClient, admin_headers: dict[str, str]
+) -> None:
+    """예전에는 `payload["slug"]` 가 KeyError 로 500 을 냈다."""
+
+    r = client.post("/api/organizations", headers=admin_headers, json={"name": "x"})
+    assert r.status_code == 422

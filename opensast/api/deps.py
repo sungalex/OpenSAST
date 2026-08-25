@@ -1,6 +1,6 @@
 """FastAPI 종속성 주입 유틸.
 
-인가는 라우트 계약에서 강제된다 (ADR-001). 서비스에 넘길 `ActorContext` 는
+인가는 라우트 계약에서 강제된다 (ADR-0005). 서비스에 넘길 `ActorContext` 는
 `get_actor` / `require_actor(...)` 의존성으로만 만들며, 라우트가 이를 빠뜨리면
 서비스 생성자가 `TypeError` 를 던져 즉시 드러난다.
 """

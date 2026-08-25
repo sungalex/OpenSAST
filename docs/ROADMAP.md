@@ -6,7 +6,7 @@
 
 ## 이 문서의 위치
 
-문서는 성격별로 나뉘어 있다 ([ADR-0003](adr/0003-documentation-architecture.md)).
+문서는 성격별로 나뉘어 있다 ([ADR-0007](adr/0007-documentation-architecture.md)).
 
 | 알고 싶은 것 | 볼 곳 |
 |---|---|
@@ -15,6 +15,7 @@
 | **무엇을 할 것인가** | **이 문서** |
 | 어떻게 쓰는가 | [`guide/`](guide/README.md) |
 | 그때는 어땠는가 | [`reviews/`](reviews/) |
+| **문서 전체 목록** | [`README.md`](README.md) |
 
 **여기에는 완료된 항목을 남기지 않는다.** 완료 항목은 릴리스마다 아래
 "완료된 마일스톤" 으로 한 줄 요약만 옮기고, 상세는 ARCHITECTURE 또는 ADR 이
@@ -45,7 +46,19 @@
   `tests/fixtures/vulnerable-samples/{lang}/{rule_id}/{positive,negative}.*`
 - SARIF fixture 확대 — 각 엔진 × 각 언어 실제 출력
 
-### 2.2 CI 품질 게이트
+### 2.2 엔진 구성 결정 마무리
+
+4월에 발행된 ADR 3건이 **Proposed** 로 멈춰 있다. 코드는 여전히 CodeQL·ESLint 를
+포함하고, 문서는 Joern 을 가리킨다. 이 상태가 길어질수록 "무엇이 진짜인가" 가
+흐려진다.
+
+- [ADR-0001](adr/0001-unified-analysis-pipeline.md) — Joern 대체 / CodeQL·ESLint 제거:
+  Accepted 전환 또는 Rejected 명시
+- [ADR-0002](adr/0002-joern-version-pinning.md) — Joern 버전 고정: 위 결정에 종속
+- [ADR-0004](adr/0004-engine-version-governance.md) — 엔진 버전 거버넌스 3-Tier
+- 실행 계획은 [`plan/UPGRADE-PLAN-unified-analysis.md`](plan/UPGRADE-PLAN-unified-analysis.md)
+
+### 2.3 CI 품질 게이트
 
 - `pytest --cov=opensast --cov-report=xml` + Codecov 업로드
 - `ruff check opensast` — 현재 CI 에서 실행되지 않는다. 기준선(2026-08-25 시점
@@ -54,13 +67,13 @@
 - `mypy opensast` — 실패 허용 단계로 점진 도입
 - `pip-audit` (의존성 CVE)
 
-### 2.3 스캔 취소 · 진행률
+### 2.4 스캔 취소 · 진행률
 
 - Celery `revoke/terminate` 경로 — 현재 큐잉된 스캔을 취소할 방법이 없다
 - `_run_pass` 에 진행률 콜백 → SSE 로 엔진 단위 진행률 전달
 - 프론트 `ScanDetail` 이 SSE 를 구독하도록 전환
 
-### 2.4 남은 파이프라인 견고성
+### 2.5 남은 파이프라인 견고성
 
 - `engines/base.py` — `TimeoutExpired` / 디스크 부족 / 리소스 오류 구분 처리
 - `engines/codeql.py` — `database create` 실패 시 stderr 로깅, DB 상태 검증
@@ -103,7 +116,7 @@
 - **rate limit Redis 백엔드** — slowapi in-memory 는 다중 인스턴스에서 우회된다
 - **CSP nonce** — `unsafe-inline` 제거
 - **시크릿 관리** — Docker secrets 파일 마운트 또는 Vault/AWS SM 연동
-  ([ADR-0002](adr/0002-configuration-single-source.md) 후속)
+  ([ADR-0006](adr/0006-configuration-single-source.md) 후속)
 - **기본 관리자 자격증명 제거** — 현재 `bootstrap_admin_password` 기본값이
   `opensast-admin` 이다. README 에 공개된 문서화된 값이라 "유출" 은 아니지만,
   기본 자격증명이 존재한다는 것 자체가 진단 도구로서 약점이다. 서명 키와 같은
@@ -112,7 +125,7 @@
 - **감사 로그 장기 보관** — S3 export (WORM / Object Lock)
 - **Finding 조회 seek 페이지네이션** — 현재 커서가 있으나 offset 경로가 병행
 - **triage 태스크 분할** — 상한(`triage_max_findings`)으로 자르는 대신 chunked
-  task 로 전량 처리 ([ADR-0004](adr/0004-triage-concurrency.md) 후속). 행안부
+  task 로 전량 처리 ([ADR-0008](adr/0008-triage-concurrency.md) 후속). 행안부
   대응에서 미판정 잔여가 허용되지 않는다면 이 항목이 v0.7 보다 앞선다
 - **`work_dir` 공유 스토리지** — 다중 노드 확장 시 NFS/CSI 전환 검토
 
@@ -142,7 +155,7 @@
 |---|---|---|---|
 | 1 | **실행 통합 테스트 부재** — 엔진·Celery 가 전부 목(mock) 뒤에 있다 | 엔진 호출 규약이 깨져도 CI 가 초록. 상용 도구로서 신뢰 문제 | v0.6 최우선. marker 로 분리해 로컬은 빠르게, CI 는 전량 |
 | 2 | **LLM 비용** — 대형 프로젝트 triage | 프로덕션 채택 블로커 | 캐시가 실제로 동작하게 배선 완료. 토큰 예산 카운팅은 v0.8 |
-| 3 | **CodeQL 라이선스** — GitHub Advanced Security 약관 | 오픈소스 배포 시 상용 사용자 주의 | README·가이드에 상업적 사용 시 라이선스 확인 문구 명시. 무료 대안(Joern) 조사 |
+| 3 | **CodeQL 라이선스** — GitHub Advanced Security 약관 | 공공·감리 등 상업 진단에 그대로 쓸 수 없다 | 대안 조사는 이미 끝났다 — [ADR-0001](adr/0001-unified-analysis-pipeline.md) 이 Joern 대체를, [ADR-0002](adr/0002-joern-version-pinning.md) 가 버전 고정 전략을 제안한 상태(둘 다 **Proposed**). 남은 일은 조사가 아니라 **두 ADR 의 Accepted 전환과 실행**이다. 그전까지는 [`guide/pipeline-and-engines.md`](guide/pipeline-and-engines.md) 의 라이선스 경고로 막는다 |
 | 4 | **KISA CC 요건 미구체화** | v1.0 일정 변동 | v0.6 중 별도 조사 트랙 |
 | 5 | **엔진 바이너리 배포 복잡성** | 온보딩 마찰 | CodeQL/SpotBugs 포함 "fat" 이미지 별도 태그(`opensast:X.Y-full`) |
 | 6 | **triage 상한 정책의 규정 적합성** | 미판정 잔여가 감사에서 문제될 수 있음 | 행안부 대응 관점 확인 후 chunked task 전환 여부 결정 |
@@ -157,7 +170,7 @@
 | v0.3.1 | 기본 파이프라인 · MOIS 49 카탈로그 · 리포트 4종 |
 | v0.4.x | 플러그인 레지스트리 · 서비스 계층 · 3-프로파일 설정 · 보안 미들웨어 · 계정 잠금 · YAML 카탈로그 오버레이 · 확장 훅 · Alembic 도입 · Dockerfile 하드닝 |
 | v0.5.0 | 관측성(`/metrics`, OpenTelemetry, JSON 로깅) · 복합 인덱스 · Refresh token + 블랙리스트 · CSRF · triage 캐시·재시도 · lockfile · dependabot |
-| v0.5.1 | **인가 경계 재설계** ([ADR-0001](adr/0001-authorization-boundary.md)) · **설정 단일화 및 프로파일 배선** ([ADR-0002](adr/0002-configuration-single-source.md)) · **문서 재편** ([ADR-0003](adr/0003-documentation-architecture.md)) · **triage 동시 실행** ([ADR-0004](adr/0004-triage-concurrency.md)) · 저장 멱등성 · 경로 봉쇄 · 엔진 동시 실행 |
+| v0.5.1 | **인가 경계 재설계** ([ADR-0005](adr/0005-authorization-boundary.md)) · **설정 단일화 및 프로파일 배선** ([ADR-0006](adr/0006-configuration-single-source.md)) · **문서 재편** ([ADR-0007](adr/0007-documentation-architecture.md)) · **triage 동시 실행** ([ADR-0008](adr/0008-triage-concurrency.md)) · 저장 멱등성 · 경로 봉쇄 · 엔진 동시 실행 |
 
 과거 감사 결과와 그 사후 대조는
 [`reviews/2026-04-16-gap-audit.md`](reviews/2026-04-16-gap-audit.md) 및

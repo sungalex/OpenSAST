@@ -1,6 +1,6 @@
 """스캔 라우트 — 얇은 HTTP 어댑터 (ScanService 위임).
 
-모든 라우트가 `ActorContext` 를 서비스에 주입한다 (ADR-001). 스캔 실행 계열은
+모든 라우트가 `ActorContext` 를 서비스에 주입한다 (ADR-0005). 스캔 실행 계열은
 `require_actor(*WRITE_ROLES)` 로 `viewer` 를 차단하며, 이는 ARCHITECTURE §4.3
 RBAC 표를 코드에서 강제하는 지점이다.
 """

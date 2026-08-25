@@ -6,10 +6,10 @@
 > 여기 적힌 결함은 같은 날 모두 조치되었으므로, **현재 상태의 근거로 쓰지 말 것.**
 >
 > - 지금 무엇이 있는가 → [`../ARCHITECTURE.md`](../ARCHITECTURE.md)
-> - 조치의 근거 → [ADR-0001](../adr/0001-authorization-boundary.md) ·
->   [ADR-0002](../adr/0002-configuration-single-source.md) ·
->   [ADR-0003](../adr/0003-documentation-architecture.md) ·
->   [ADR-0004](../adr/0004-triage-concurrency.md)
+> - 조치의 근거 → [ADR-0005](../adr/0005-authorization-boundary.md) ·
+>   [ADR-0006](../adr/0006-configuration-single-source.md) ·
+>   [ADR-0007](../adr/0007-documentation-architecture.md) ·
+>   [ADR-0008](../adr/0008-triage-concurrency.md)
 > - 남은 일 → [`../ROADMAP.md`](../ROADMAP.md)
 >
 > ### ⚠️ 본문 정정 (C-1)
@@ -20,6 +20,17 @@
 > 작업 환경에 올라오지 않아 확인하지 못한 것이 원인이다.
 >
 > 정확한 문제 범위는 다음과 같으며, 아래 C-1 본문은 이에 맞게 고쳤다.
+>
+> ### 📌 ADR 번호 재배정 (2026-08-26)
+>
+> 이 진단서가 제안한 ADR-001~004 는 발행 시점에 `docs/adr/` 가 비어 있다고
+> 전제했으나, 실제로는 2026-04 에 작성된 ADR-0001·0002·0004 가 이미 있었다.
+> 번호 충돌을 풀기 위해 이 진단서의 4건을 **ADR-0005~0008** 로 재배정했다.
+> 아래 §6 본문의 `ADR-001`~`ADR-004` 표기는 발행 당시 그대로 두되, 실제
+> 문서는 다음에 대응한다 — 001→[0005](../adr/0005-authorization-boundary.md),
+> 002→[0006](../adr/0006-configuration-single-source.md),
+> 003→[0007](../adr/0007-documentation-architecture.md),
+> 004→[0008](../adr/0008-triage-concurrency.md).
 >
 > - `docker-compose.yml` (README 가 안내하는 기본 경로)에 프로파일 지정 없음
 >   → 팀/온프레미스 표준 배포가 `local` 기본값으로 기동

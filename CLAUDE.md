@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Documentation map
 
-Docs are split by *when they are true* — see [ADR-0003](docs/adr/0003-documentation-architecture.md).
+Docs are split by *when they are true* — see [ADR-0007](docs/adr/0007-documentation-architecture.md).
 Keep this file in sync with `docs/ARCHITECTURE.md`; it is a summary, not a second source of truth.
 
 | Question | Document |
@@ -25,9 +25,15 @@ Keep this file in sync with `docs/ARCHITECTURE.md`; it is a summary, not a secon
 | What is planned | [`docs/ROADMAP.md`](docs/ROADMAP.md) |
 | How to use it | [`docs/guide/`](docs/guide/README.md) |
 | What it looked like back then | [`docs/reviews/`](docs/reviews/) (frozen) |
+| **Every document, classified** | [`docs/README.md`](docs/README.md) |
 
 **Write an ADR** when a change is hard to reverse, real alternatives existed, or
 someone will later ask "why is it like this?"
+
+**Before writing one, read [`docs/adr/README.md`](docs/adr/README.md) and take the
+next unused number.** Numbering is by creation order and the directory is not
+empty — 0001/0002/0004 date from 2026-04. Do not assume a clean slate; a
+collision there once required a one-time renumber, recorded in that README.
 
 ## Architecture
 
@@ -60,14 +66,14 @@ the actor's `organization_id`. Full access requires `ActorContext.system()`.
 - CLI / Celery / bootstrap: `ActorContext.system(reason=...)`
 
 Never construct a service without an actor to "make it work". See
-[ADR-0001](docs/adr/0001-authorization-boundary.md).
+[ADR-0005](docs/adr/0005-authorization-boundary.md).
 
 ### Configuration — single source of truth
 
 `opensast/config.py` is the only source of truth for settings. Never hardcode a
 limit, timeout, or path in a service or middleware — read it from `Settings`.
 Docs describe that file; if they disagree, the code wins.
-See [ADR-0002](docs/adr/0002-configuration-single-source.md).
+See [ADR-0006](docs/adr/0006-configuration-single-source.md).
 
 ### Schema changes
 
@@ -139,3 +145,9 @@ rules:
 - `tests/test_engine_integration.py` and `tests/vulnerable-samples/` contain
   **deliberately vulnerable** code used to verify the detection rules. Never
   "fix" them. Scanner exceptions for them live in `.gitguardian.yaml`.
+- Every route that touches tenant data goes through a service with an
+  `ActorContext`. Never `select(models.X)` inside a route — that is how
+  `audit.py` and `organizations.py` kept leaking across organizations after
+  ADR-0005 landed everywhere else.
+- New documents must be registered in [`docs/README.md`](docs/README.md). An
+  unregistered document has no owner and silently rots.

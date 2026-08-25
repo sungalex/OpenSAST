@@ -1,68 +1,58 @@
-"""조직 관리 API."""
+"""조직(테넌트) 레지스트리 API.
+
+스코핑 규칙은 `OrganizationService` 의 docstring 에 있다. 요약하면 조직에 속한
+사용자는 자기 조직만 보고, 조직 미지정 admin(= 플랫폼 관리자)과 시스템
+컨텍스트만 전체를 다룬다.
+
+예전에는 목록·상세가 `get_current_user` 만 요구하고 전체 조직을 반환해,
+`viewer` 권한 사용자도 모든 테넌트의 slug·name 을 열거할 수 있었다.
+"""
+
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from opensast.api.deps import get_current_user, get_db, require_role
-from opensast.db import models
+from opensast.api.deps import ROLE_ADMIN, get_actor, get_db, require_actor
+from opensast.api.schemas import OrganizationCreate, OrganizationOut
+from opensast.services.base import ActorContext, ServiceError
+from opensast.services.organization_service import OrganizationService
 
 router = APIRouter(prefix="/api/organizations", tags=["organizations"])
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, response_model=OrganizationOut)
 def create_org(
-    payload: dict,
+    payload: OrganizationCreate,
     db: Session = Depends(get_db),
-    user=Depends(require_role("admin")),
-):
-    if db.scalar(
-        select(models.Organization).where(
-            models.Organization.slug == payload["slug"]
+    actor: ActorContext = Depends(require_actor(ROLE_ADMIN)),
+) -> OrganizationOut:
+    try:
+        org = OrganizationService(db, actor).create(
+            slug=payload.slug, name=payload.name
         )
-    ):
-        raise HTTPException(status_code=409, detail="slug already exists")
-    org = models.Organization(
-        slug=payload["slug"], name=payload["name"], is_active=True
-    )
-    db.add(org)
-    db.commit()
-    db.refresh(org)
-    return {
-        "id": org.id,
-        "slug": org.slug,
-        "name": org.name,
-        "is_active": org.is_active,
-    }
+    except ServiceError as exc:
+        raise exc.as_http() from exc
+    return OrganizationOut.model_validate(org)
 
 
-@router.get("")
+@router.get("", response_model=list[OrganizationOut])
 def list_orgs(
     db: Session = Depends(get_db),
-    _: models.User = Depends(get_current_user),
-):
-    orgs = list(
-        db.scalars(select(models.Organization).order_by(models.Organization.id))
-    )
-    return [
-        {"id": o.id, "slug": o.slug, "name": o.name, "is_active": o.is_active}
-        for o in orgs
-    ]
+    actor: ActorContext = Depends(get_actor),
+) -> list[OrganizationOut]:
+    orgs = OrganizationService(db, actor).list()
+    return [OrganizationOut.model_validate(o) for o in orgs]
 
 
-@router.get("/{org_id}")
+@router.get("/{org_id}", response_model=OrganizationOut)
 def get_org(
     org_id: int,
     db: Session = Depends(get_db),
-    _: models.User = Depends(get_current_user),
-):
-    org = db.get(models.Organization, org_id)
-    if org is None:
-        raise HTTPException(status_code=404, detail="organization not found")
-    return {
-        "id": org.id,
-        "slug": org.slug,
-        "name": org.name,
-        "is_active": org.is_active,
-    }
+    actor: ActorContext = Depends(get_actor),
+) -> OrganizationOut:
+    try:
+        org = OrganizationService(db, actor).get(org_id)
+    except ServiceError as exc:
+        raise exc.as_http() from exc
+    return OrganizationOut.model_validate(org)

@@ -48,7 +48,7 @@ services:
         condition: service_healthy
     environment:
       # 프로파일을 명시하지 않으면 local 기본값(CORS "*", docs 노출, rate limit off)
-      # 으로 뜬다. 컨테이너 배포는 반드시 docker 프로파일을 선언한다 (ADR-002).
+      # 으로 뜬다. 컨테이너 배포는 반드시 docker 프로파일을 선언한다 (ADR-0006).
       OPENSAST_PROFILE: docker
       OPENSAST_DATABASE_URL: postgresql+psycopg2://opensast:opensast@postgres:5432/opensast
       OPENSAST_REDIS_URL: redis://redis:6379/0

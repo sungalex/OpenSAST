@@ -1,6 +1,6 @@
 """서비스 계층 공통 추상 기반.
 
-**인가 경계 정책 (ADR-001)**
+**인가 경계 정책 (ADR-0005)**
 
 서비스는 반드시 `ActorContext` 를 받아야 한다. 예전에는 `actor` 가 선택 인자였고
 누락 시 조직 필터가 "전체 통과" 로 평가되어, 라우트가 actor 를 빠뜨리는 것만으로
@@ -163,4 +163,5 @@ class BaseService:
             target_id=target_id,
             detail=detail or {},
             ip=self.actor.ip,
+            organization_id=self.actor.organization_id,
         )

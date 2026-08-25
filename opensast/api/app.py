@@ -46,7 +46,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
 
     # 프로파일 무결성 검사.
-    # cloud 프로파일에서는 경고가 곧 기동 실패다 (ADR-002) — 약한 시크릿이나
+    # cloud 프로파일에서는 경고가 곧 기동 실패다 (ADR-0006) — 약한 시크릿이나
     # 빈/와일드카드 CORS 로 운영에 올라가는 경로를 막는다.
     for warning in settings.enforce_startup_policy():
         log.warning(warning)

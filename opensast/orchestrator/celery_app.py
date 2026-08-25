@@ -58,7 +58,7 @@ def create_celery_app() -> Celery:
         timezone="Asia/Seoul",
         enable_utc=True,
         task_track_started=True,
-        # 하드코딩 제거 (O6/ADR-002) — 설정이 유일한 진실의 원천이다.
+        # 하드코딩 제거 (O6/ADR-0006) — 설정이 유일한 진실의 원천이다.
         task_time_limit=settings.scan_task_time_limit,
         task_soft_time_limit=settings.scan_task_soft_time_limit,
         worker_prefetch_multiplier=1,

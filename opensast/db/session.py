@@ -1,6 +1,6 @@
 """SQLAlchemy 엔진·세션 관리.
 
-풀 크기는 `Settings.db_pool_size` 를 실제로 반영한다 (ADR-002). 예전에는 이 값이
+풀 크기는 `Settings.db_pool_size` 를 실제로 반영한다 (ADR-0006). 예전에는 이 값이
 프로파일마다 정의되고 문서 표에도 실렸지만 `create_engine` 에 전달되지 않아
 설정이 죽어 있었다.
 """

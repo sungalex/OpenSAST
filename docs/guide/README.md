@@ -5,7 +5,7 @@
 
 이 가이드는 예전 `docs/USER_GUIDE.md`(1,926줄 단일 파일)를 독자별로 나눈 것이다.
 독자가 여섯 종류인데 진입점이 하나여서, 필요한 절을 찾기도 어렵고 어긋난 곳을
-발견하기도 어려웠다 ([ADR-0003](../adr/0003-documentation-architecture.md)).
+발견하기도 어려웠다 ([ADR-0007](../adr/0007-documentation-architecture.md)).
 
 ## 처음 오셨다면
 

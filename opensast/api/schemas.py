@@ -289,6 +289,26 @@ class GateCheckResult(BaseModel):
     new_high: int = 0
 
 
+class OrganizationCreate(BaseModel):
+    """조직 생성 요청.
+
+    예전에는 라우트가 `payload: dict` 를 받아 `payload["slug"]` 로 꺼냈다.
+    필드가 빠지면 `KeyError` 가 500 으로 새어 나갔다.
+    """
+
+    slug: str = Field(min_length=1, max_length=120)
+    name: str = Field(min_length=1, max_length=200)
+
+
+class OrganizationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    slug: str
+    name: str
+    is_active: bool
+
+
 class AuditLogOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

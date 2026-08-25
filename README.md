@@ -90,7 +90,7 @@ docker compose run --rm api alembic upgrade head   # 스키마는 별도 단계
 
 ## 📖 문서
 
-문서는 성격별로 나뉘어 있습니다 ([ADR-0003](docs/adr/0003-documentation-architecture.md)).
+문서는 성격별로 나뉘어 있습니다 ([ADR-0007](docs/adr/0007-documentation-architecture.md)).
 
 | 알고 싶은 것 | 문서 |
 |---|---|
