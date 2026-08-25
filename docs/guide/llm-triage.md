@@ -1,12 +1,12 @@
 # LLM 오탐 필터링
 
 > 이 문서는 `docs/USER_GUIDE.md`(1,926줄 단일 파일)를 독자별로 분할한 것이다
-> ([ADR-0003](../adr/0003-documentation-architecture.md)).
+> ([ADR-0007](../adr/0007-documentation-architecture.md)).
 
 > **정본 주의**
 >
 > 동시 실행·캐시·상한 동작의 근거는
-> [ADR-0004](../adr/0004-triage-concurrency.md) 에 있다.
+> [ADR-0008](../adr/0008-triage-concurrency.md) 에 있다.
 
 ---
 

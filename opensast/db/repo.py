@@ -231,9 +231,18 @@ def record_audit(
     target_id: str | None = None,
     detail: dict | None = None,
     ip: str | None = None,
+    organization_id: int | None = None,
 ) -> models.AuditLog:
+    """감사 로그 1건을 기록한다.
+
+    `organization_id` 는 다중 테넌시 배포에서 감사 로그를 조직 단위로 격리하기
+    위한 귀속 정보다. 예전에는 이 값을 채우지 않아 모든 행이 `NULL` 이었고,
+    그 결과 조회 라우트가 조직 스코핑을 걸 근거 자체를 갖지 못했다.
+    """
+
     entry = models.AuditLog(
         user_id=user_id,
+        organization_id=organization_id,
         action=action,
         target_type=target_type,
         target_id=str(target_id) if target_id is not None else None,

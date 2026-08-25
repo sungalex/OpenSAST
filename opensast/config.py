@@ -9,7 +9,7 @@
 프로파일이 달라도 코드베이스는 동일하며, 미들웨어·로그 레벨·기본 CORS·문서 노출·
 rate limit 임계값 같은 보안·운영 관련 기본값만 조정된다.
 
-**설정 진실의 원천은 이 파일 하나다 (ADR-002).** 서비스·미들웨어는 상수를
+**설정 진실의 원천은 이 파일 하나다 (ADR-0006).** 서비스·미들웨어는 상수를
 하드코딩하지 않고 반드시 `Settings` 에서 읽는다. 문서(ARCHITECTURE §2.4)의 표는
 이 파일을 서술할 뿐이며, 불일치가 생기면 이 파일이 정본이다.
 
@@ -98,9 +98,9 @@ _PROFILE_DEFAULTS: dict[Profile, dict[str, object]] = {
         "db_pool_size": 20,
         "enforce_strong_secret": True,
         "enforce_https": True,
-        # 운영에서는 약한 시크릿·빈 CORS 로 기동하지 못하게 막는다 (ADR-002)
+        # 운영에서는 약한 시크릿·빈 CORS 로 기동하지 못하게 막는다 (ADR-0006)
         "fail_fast_on_config_warning": True,
-        # 프로덕션 스키마는 alembic upgrade head 로만 변경한다 (ADR-002)
+        # 프로덕션 스키마는 alembic upgrade head 로만 변경한다 (ADR-0006)
         "auto_migrate_on_startup": False,
     },
 }

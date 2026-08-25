@@ -3,7 +3,7 @@
 > **성격**: As-built — **지금 코드가 하는 일**만 기술한다.
 > 계획·희망사항·"향후" 는 여기 쓰지 않는다. 그런 내용은
 > [`ROADMAP.md`](ROADMAP.md), 결정의 근거는 [`adr/`](adr/README.md) 에 있다.
-> 이 원칙은 [ADR-0003](adr/0003-documentation-architecture.md) 에서 정했다.
+> 이 원칙은 [ADR-0007](adr/0007-documentation-architecture.md) 에서 정했다.
 >
 > **동작을 바꾸는 PR 은 이 문서를 함께 고친다.**
 
@@ -65,7 +65,7 @@
 
 라우트는 얇은 어댑터다. **인가에 필요한 정보(`ActorContext`)를 서비스에 주입하는
 것이 라우트의 계약**이며, 이를 빠뜨리면 서비스 생성자가 `TypeError` 를 던진다
-([ADR-0001](adr/0001-authorization-boundary.md)).
+([ADR-0005](adr/0005-authorization-boundary.md)).
 
 ```python
 # 라우트 — Pydantic 검증 + ActorContext 주입 + 서비스 호출
@@ -168,7 +168,7 @@ class ScanHook(Protocol):
 `OPENSAST_PROFILE ∈ {local, docker, cloud}` 이 기본값 번들을 전환한다.
 **정본은 `opensast/config.py` 의 `_PROFILE_DEFAULTS` 다** — 아래 표는 그것을
 서술할 뿐이며, 불일치가 생기면 코드가 옳다
-([ADR-0002](adr/0002-configuration-single-source.md)).
+([ADR-0006](adr/0006-configuration-single-source.md)).
 
 | 항목 | local | docker | cloud |
 |------|-------|--------|-------|
@@ -245,7 +245,7 @@ CORS, 기본 부트스트랩 비밀번호로는 뜨지 않는다.
 
 Redis 클라이언트는 URL 당 하나(커넥션 풀)를 재사용한다. 캐시 접근이 실패하면
 **최초 1회 WARNING** 을 남기고 그 실행 동안 캐시를 비활성화한다 — 조용한 성능
-저하를 만들지 않는다 ([ADR-0004](adr/0004-triage-concurrency.md)).
+저하를 만들지 않는다 ([ADR-0008](adr/0008-triage-concurrency.md)).
 
 ### 3.5 파일·소스코드 저장
 

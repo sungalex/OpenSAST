@@ -1,12 +1,12 @@
 # 설정 레퍼런스
 
 > 이 문서는 `docs/USER_GUIDE.md`(1,926줄 단일 파일)를 독자별로 분할한 것이다
-> ([ADR-0003](../adr/0003-documentation-architecture.md)).
+> ([ADR-0007](../adr/0007-documentation-architecture.md)).
 
 > **정본 주의**
 >
 > 이 문서는 `opensast/config.py` 를 **서술**한다. 값이 어긋나면 코드가 정본이다
-> ([ADR-0002](../adr/0002-configuration-single-source.md)). 프로파일별 기본값 표는
+> ([ADR-0006](../adr/0006-configuration-single-source.md)). 프로파일별 기본값 표는
 > [ARCHITECTURE §2.5](../ARCHITECTURE.md#25-설정-프로파일) 가 정본이다.
 
 ---

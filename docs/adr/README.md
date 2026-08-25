@@ -27,10 +27,43 @@ KISA CC 인증 트랙에서 설계 근거 추적성은 요구사항이 되기 �
 
 | # | 제목 | 상태 | 날짜 |
 |---|---|---|---|
-| [0001](0001-authorization-boundary.md) | 인가 강제 지점을 서비스 계층에서 라우트 계약으로 끌어올린다 | Accepted | 2026-08-25 |
-| [0002](0002-configuration-single-source.md) | 설정 진실의 원천을 하나로 만들고 배포 프로파일을 산출물에서 명시한다 | Accepted | 2026-08-25 |
-| [0003](0003-documentation-architecture.md) | 문서를 성격별로 재편하고 ADR 을 도입한다 | Accepted | 2026-08-25 |
-| [0004](0004-triage-concurrency.md) | Triage 를 동시 실행으로 전환하고 조용한 실패를 없앤다 | Accepted | 2026-08-25 |
+| [0001](0001-unified-analysis-pipeline.md) | 2-Pass 분석 파이프라인의 단일 오케스트레이션 통합 (rev.2) | Proposed | 2026-04-23 |
+| [0002](0002-joern-version-pinning.md) | Joern 엔진 버전 고정 전략 | Proposed | 2026-04-24 |
+| 0003 | *(결번)* | — | — |
+| [0004](0004-engine-version-governance.md) | SAST 엔진 버전 거버넌스 3-Tier 정책 | Proposed | 2026-04-24 |
+| [0005](0005-authorization-boundary.md) | 인가 강제 지점을 서비스 계층에서 라우트 계약으로 끌어올린다 | Accepted | 2026-08-25 |
+| [0006](0006-configuration-single-source.md) | 설정 진실의 원천을 하나로 만들고 배포 프로파일을 산출물에서 명시한다 | Accepted | 2026-08-25 |
+| [0007](0007-documentation-architecture.md) | 문서를 성격별로 재편하고 ADR 을 도입한다 | Accepted | 2026-08-25 |
+| [0008](0008-triage-concurrency.md) | Triage 를 동시 실행으로 전환하고 조용한 실패를 없앤다 | Accepted | 2026-08-25 |
+
+**0001·0002·0004 는 아직 Proposed 다.** 엔진 구성을 실제로 바꾸기 전(Joern 도입,
+CodeQL·ESLint 제거) 이 세 건의 상태를 먼저 정리해야 한다. 현재 코드는 여전히
+CodeQL·ESLint 를 포함하며, 이는 결정이 뒤집혔다는 뜻이 아니라 **아직 실행되지
+않았다**는 뜻이다.
+
+### 번호 재배정 기록 (2026-08-26, 1회성)
+
+2026-08-25 아키텍처 진단의 후속 ADR 4건이 `docs/adr/` 가 비어 있다는 전제로
+0001~0004 를 사용했으나, 2026-04 에 작성된 ADR 3건이 이미 그 번호를 쓰고
+있었다. 파일명이 `ADR-NNNN-*.md` 와 `NNNN-*.md` 로 달라 충돌이 드러나지 않은
+채 머지됐다.
+
+번호는 **작성 순서**가 정한다는 원칙에 따라 4월분이 원래 번호를 유지하고,
+8월분을 뒤로 옮겼다. 파일명은 전부 `NNNN-*.md` 로 통일했다.
+
+| 이전 | 이후 |
+|---|---|
+| `ADR-0001-unified-analysis-pipeline.md` | `0001-unified-analysis-pipeline.md` (번호 불변) |
+| `ADR-0002-joern-version-pinning.md` | `0002-joern-version-pinning.md` (번호 불변) |
+| `ADR-0004-engine-version-governance.md` | `0004-engine-version-governance.md` (번호 불변) |
+| `0001-authorization-boundary.md` | `0005-authorization-boundary.md` |
+| `0002-configuration-single-source.md` | `0006-configuration-single-source.md` |
+| `0003-documentation-architecture.md` | `0007-documentation-architecture.md` |
+| `0004-triage-concurrency.md` | `0008-triage-concurrency.md` |
+
+**이 재배정은 예외다.** "ADR 은 수정하지 않는다" 는 위 규칙은 여전히 유효하며,
+번호 충돌이라는 사고를 수습하기 위한 1회성 조치로 여기 기록만 남긴다. 앞으로
+새 ADR 은 위 표의 마지막 번호 다음을 쓴다.
 
 ## 언제 ADR 을 쓰는가
 

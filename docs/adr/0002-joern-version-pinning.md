@@ -4,8 +4,8 @@
 - 작성일: 2026-04-24
 - 작성자: OpenSAST 엔진 유지보수 팀
 - 관련 문서:
-  - [ADR-0001 — 2-Pass 분석 파이프라인 단일 오케스트레이션 통합 (rev.2)](./ADR-0001-unified-analysis-pipeline.md)
-  - [ADR-0004 — SAST 엔진 버전 거버넌스 3-Tier 정책](./ADR-0004-engine-version-governance.md)
+  - [ADR-0001 — 2-Pass 분석 파이프라인 단일 오케스트레이션 통합 (rev.2)](./0001-unified-analysis-pipeline.md)
+  - [ADR-0004 — SAST 엔진 버전 거버넌스 3-Tier 정책](./0004-engine-version-governance.md)
   - [UPGRADE-PLAN-unified-analysis.md §6](../plan/UPGRADE-PLAN-unified-analysis.md)
   - [ROADMAP.md §8](../ROADMAP.md)
 
@@ -15,7 +15,7 @@
 
 ## 1. 맥락 (Context)
 
-[ADR-0001 rev.2](./ADR-0001-unified-analysis-pipeline.md) 에서 CodeQL 을 GitHub Advanced Security 라이선스 리스크로 제거하고, 다국어 인터프로시저 테인트 분석을 **Joern (Apache-2.0)** 으로 대체하기로 결정했다. 본 ADR 은 Joern 바이너리의 버전 선정·고정·업그레이드 절차를 정의한다.
+[ADR-0001 rev.2](./0001-unified-analysis-pipeline.md) 에서 CodeQL 을 GitHub Advanced Security 라이선스 리스크로 제거하고, 다국어 인터프로시저 테인트 분석을 **Joern (Apache-2.0)** 으로 대체하기로 결정했다. 본 ADR 은 Joern 바이너리의 버전 선정·고정·업그레이드 절차를 정의한다.
 
 Joern 은 다른 어떤 엔진보다도 **버전 고정의 엄격성이 중요한 엔진**이다. 세 가지 이유가 있다.
 
@@ -29,7 +29,7 @@ Joern 은 다른 어떤 엔진보다도 **버전 고정의 엄격성이 중요�
 
 ## 2. 결정 (Decision)
 
-Joern 엔진은 [ADR-0004](./ADR-0004-engine-version-governance.md) 의 **Tier 1 (엄격 고정)** 정책을 적용한다. 구체 실행 규칙은 아래 §3~§7 에 명시한다.
+Joern 엔진은 [ADR-0004](./0004-engine-version-governance.md) 의 **Tier 1 (엄격 고정)** 정책을 적용한다. 구체 실행 규칙은 아래 §3~§7 에 명시한다.
 
 ### 2.1 버전 선정 기준 — 필수 5개 조건
 

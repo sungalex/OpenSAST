@@ -65,6 +65,7 @@ def login(
         repo.record_audit(
             db,
             user_id=user.id,
+            organization_id=user.organization_id,
             action="auth.login_locked",
             target_type="user",
             target_id=str(user.id),
@@ -82,6 +83,7 @@ def login(
         repo.record_audit(
             db,
             user_id=user.id,
+            organization_id=user.organization_id,
             action="auth.login_failed",
             target_type="user",
             target_id=str(user.id),
@@ -108,6 +110,7 @@ def login(
     repo.record_audit(
         db,
         user_id=user.id,
+        organization_id=user.organization_id,
         action="auth.login",
         target_type="user",
         target_id=str(user.id),
@@ -195,6 +198,7 @@ def logout(
     repo.record_audit(
         db,
         user_id=user.id,
+        organization_id=user.organization_id,
         action="auth.logout",
         ip=request.client.host if request.client else None,
     )

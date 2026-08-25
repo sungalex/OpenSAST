@@ -1,7 +1,7 @@
 # UPGRADE PLAN — 통합 분석 파이프라인 고도화 계획
 
 - 대상 릴리스: v0.5.0 → v0.6.0 → v1.0.0
-- 기준 결정: [ADR-0001 — 2-Pass 분석 파이프라인의 단일 오케스트레이션 통합 (rev.2)](../adr/ADR-0001-unified-analysis-pipeline.md)
+- 기준 결정: [ADR-0001 — 2-Pass 분석 파이프라인의 단일 오케스트레이션 통합 (rev.2)](../adr/0001-unified-analysis-pipeline.md)
 - 작성일: 2026-04-23
 - 작성자: OpenSAST 아키텍처 팀
 

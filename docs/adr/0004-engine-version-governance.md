@@ -4,8 +4,8 @@
 - 작성일: 2026-04-24
 - 작성자: OpenSAST 엔진 유지보수 팀 · 보안팀
 - 관련 문서:
-  - [ADR-0001 — 2-Pass 파이프라인 단일 오케스트레이션 통합 (rev.2)](./ADR-0001-unified-analysis-pipeline.md)
-  - [ADR-0002 — Joern 엔진 버전 고정 전략](./ADR-0002-joern-version-pinning.md)
+  - [ADR-0001 — 2-Pass 파이프라인 단일 오케스트레이션 통합 (rev.2)](./0001-unified-analysis-pipeline.md)
+  - [ADR-0002 — Joern 엔진 버전 고정 전략](./0002-joern-version-pinning.md)
   - [ROADMAP.md §3.1 R8/R9, §8 #5b](../ROADMAP.md)
   - [UPGRADE-PLAN-unified-analysis.md §6](../plan/UPGRADE-PLAN-unified-analysis.md)
 

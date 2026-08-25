@@ -1,13 +1,13 @@
 # 인증과 권한
 
 > 이 문서는 `docs/USER_GUIDE.md`(1,926줄 단일 파일)를 독자별로 분할한 것이다
-> ([ADR-0003](../adr/0003-documentation-architecture.md)).
+> ([ADR-0007](../adr/0007-documentation-architecture.md)).
 
 > **정본 주의**
 >
 > RBAC 표의 정본은 [ARCHITECTURE §4.3](../ARCHITECTURE.md#43-권한-rbac) 이며,
 > 강제 지점은 `api/deps.py` 의 `require_actor()` 와 서비스의 `require_role()` 이다
-> ([ADR-0001](../adr/0001-authorization-boundary.md)).
+> ([ADR-0005](../adr/0005-authorization-boundary.md)).
 
 ---
 

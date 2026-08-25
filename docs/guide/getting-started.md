@@ -1,7 +1,7 @@
 # 설치와 첫 실행
 
 > 이 문서는 `docs/USER_GUIDE.md`(1,926줄 단일 파일)를 독자별로 분할한 것이다
-> ([ADR-0003](../adr/0003-documentation-architecture.md)).
+> ([ADR-0007](../adr/0007-documentation-architecture.md)).
 
 ---
 
@@ -31,6 +31,8 @@
 | **Tier 1 — 완전 지원** | macOS (Apple Silicon / Intel) | Docker Compose 권장 | ✅ CI 정기 검증 |
 | **Tier 2 — 권장 경로** | **Windows 10/11 + WSL2** | WSL 안에서 Docker Compose | ✅ CI smoke 검증, 상세 가이드: [docs/install-windows-wsl2.md](../install-windows-wsl2.md) |
 | **Tier 3 — Best-effort** | macOS 네이티브 pip 설치 | `brew install pango cairo` 후 `pip install -e '.[dev]'` | 엔진 바이너리는 별도 수동 설치 필요 |
+
+> **엔진 바이너리는 OpenSAST 에 번들되지 않는다.** 설치돼 있지 않은 엔진은 건너뛰므로 스캔은 성공하지만 해당 언어의 결과가 비게 된다. 현재 상태는 `opensast engines` 로 확인하고, 설치 명령은 [`pipeline-and-engines.md` §7.1](pipeline-and-engines.md#71-엔진-설치) 에 있다.
 | **Unsupported** | Windows 네이티브 | — | Semgrep/WeasyPrint/Celery prefork 호환성 문제로 **지원하지 않음**. WSL2 사용 권장 |
 | **Unsupported** | FreeBSD/OpenBSD | — | 공식 엔진 바이너리 없음 |
 

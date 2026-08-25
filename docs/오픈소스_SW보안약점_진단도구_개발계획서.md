@@ -13,7 +13,7 @@
 >
 > 법적·제도적 점검 기준(§2)과 49개 항목 분류(§2.2)는 외부 규정을 옮긴 것이므로
 > 여전히 참조 가치가 있다. 동결 근거는
-> [ADR-0003](adr/0003-documentation-architecture.md).
+> [ADR-0007](adr/0007-documentation-architecture.md).
 
 ---
 

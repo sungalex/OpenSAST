@@ -4,7 +4,7 @@
 트러블슈팅을 **1,926줄 한 파일**에 담고 있었습니다. 독자가 여섯 종류인데 진입점이
 하나여서 필요한 절을 찾기도, 어긋난 곳을 발견하기도 어려웠습니다.
 
-성격별 문서 재편([ADR-0003](adr/0003-documentation-architecture.md))에 따라
+성격별 문서 재편([ADR-0007](adr/0007-documentation-architecture.md))에 따라
 독자별로 나눴습니다. **목차는 [`docs/guide/README.md`](guide/README.md) 입니다.**
 
 ## 바로 가기
