@@ -46,7 +46,9 @@ def test_safe_extract_rejects_zip_slip(tmp_path: Path) -> None:
     )
     dest = tmp_path / "out"
     dest.mkdir()
-    with pytest.raises(ValueError, match="대상 경로를 벗어"):
+    from opensast.services.base import ServiceError
+
+    with pytest.raises(ServiceError, match="대상 경로를 벗어"):
         _safe_extract_zip(archive, dest)
     assert not (tmp_path / "evil.txt").exists()
 

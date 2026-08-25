@@ -53,9 +53,27 @@ docker compose up --build
 환경변수로 반드시 변경한 뒤 기동하세요. 동일 이메일의 계정이 이미 존재하면
 부트스트랩 로직은 건너뜁니다.
 
-## 📖 전체 사용자 가이드
+## 배포 프로파일
 
-설치·설정·CLI·REST API·엔진·LLM·리포트·프론트엔드·DB 스키마·트러블슈팅·변경 이력을 포함한 **모든 기능의 상세 설명**은 **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** 를 참조하세요.
+`OPENSAST_PROFILE` 이 보안·운영 기본값 번들을 고릅니다. **지정하지 않으면
+`local` 로 동작해 CORS 가 `*`, API docs 노출, rate limit 비활성 상태가 됩니다.**
+
+| 프로파일 | 용도 | 특징 |
+|---|---|---|
+| `local` | 개발자 워크스테이션 | 보안 기본값 완화, docs 노출, DEBUG 로그 |
+| `docker` | 팀 / 온프레미스 | `docker-compose.yml` 이 자동 지정 |
+| `cloud` | 프로덕션 | docs 비활성, JSON 로그, **약한 시크릿·빈 CORS 로는 기동 거부** |
+
+프로덕션 기동:
+
+```bash
+OPENSAST_SECRET_KEY=$(openssl rand -hex 32) \
+OPENSAST_CORS_ORIGINS=https://sast.corp.com \
+OPENSAST_BOOTSTRAP_ADMIN_PASSWORD='<강력한 비밀번호>' \
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+docker compose run --rm api alembic upgrade head   # 스키마는 별도 단계
+```
 
 ## 2-Pass 분석 파이프라인
 
@@ -63,10 +81,31 @@ docker compose up --build
 2. **2차 Pass**: CodeQL/SpotBugs
 3. **3단계 LLM Triage**: `opensast.llm.triage.Triager` — 원본 Finding을 **제거하지 않고** 오탐 확률·판정 근거·조치 방안을 `triage` 필드에 기록 (행안부 지침 준수)
 
+한 Pass 안의 엔진은 동시에 실행되며, 2차 Pass 가 생략되거나 triage 상한에 걸리면
+그 사실이 `ScanResult.notes` 에 기록됩니다 — 조용히 축소되지 않습니다.
+
 ## 49개 항목 ↔ CWE ↔ 엔진 매핑
 
 `opensast/mois/catalog.py` 에서 단일 소스로 관리되며, `opensast list-mois` 및 `/api/mois/items` 로 조회한다.
 
+## 📖 문서
+
+문서는 성격별로 나뉘어 있습니다 ([ADR-0003](docs/adr/0003-documentation-architecture.md)).
+
+| 알고 싶은 것 | 문서 |
+|---|---|
+| **어떻게 쓰는가** | **[docs/guide/](docs/guide/README.md)** — 설치·설정·CLI·API·운영 |
+| 지금 무엇이 있는가 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| 왜 그렇게 만들었는가 | [docs/adr/](docs/adr/README.md) |
+| 무엇을 할 것인가 | [docs/ROADMAP.md](docs/ROADMAP.md) |
+| 그때는 어땠는가 | [docs/reviews/](docs/reviews/) |
+
+기여 방법은 [CONTRIBUTING.md](CONTRIBUTING.md), 취약점 신고는
+[SECURITY.md](SECURITY.md) 를 참조하세요.
+
 ## 라이선스
 
 Apache-2.0
+
+> **참고**: CodeQL 엔진은 GitHub Advanced Security 약관의 적용을 받습니다.
+> 상업적 사용 시 라이선스 조건을 확인하세요.

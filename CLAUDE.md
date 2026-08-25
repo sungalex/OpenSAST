@@ -10,24 +10,71 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Multi-engine orchestration**: Combines multiple open-source SAST engines (Opengrep, CodeQL, SpotBugs, Bandit, ESLint, gosec) to maximize detection and minimize false positives
 - **CWE-based rule mapping**: Maps all 49 MOIS security weakness items to CWE IDs
-- **LLM-based false positive filtering**: Uses AI (Ollama/Gemma locally, Claude API for cloud) to classify detection results and calculate false positive probability
+- **LLM-based false positive filtering**: Uses AI (Ollama/Gemma locally, Claude API for cloud) to classify results — it **annotates, never removes**, original findings
 - **YAML-based custom rules**: Extensible rule system for Opengrep
+
+## Documentation map
+
+Docs are split by *when they are true* — see [ADR-0003](docs/adr/0003-documentation-architecture.md).
+Keep this file in sync with `docs/ARCHITECTURE.md`; it is a summary, not a second source of truth.
+
+| Question | Document |
+|---|---|
+| What exists right now | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (as-built) |
+| Why it was built this way | [`docs/adr/`](docs/adr/README.md) |
+| What is planned | [`docs/ROADMAP.md`](docs/ROADMAP.md) |
+| How to use it | [`docs/guide/`](docs/guide/README.md) |
+| What it looked like back then | [`docs/reviews/`](docs/reviews/) (frozen) |
+
+**Write an ADR** when a change is hard to reverse, real alternatives existed, or
+someone will later ask "why is it like this?"
 
 ## Architecture
 
 ### 2-Pass Analysis Model
 
-1. **1st Pass (Fast)**: Pattern matching via Opengrep, Bandit, ESLint, gosec (~30 seconds per PR)
-2. **2nd Pass (Deep)**: Semantic analysis via CodeQL and SpotBugs (scheduled)
-3. **3rd Stage**: LLM-based post-processing for false positive filtering and remediation suggestions
+1. **1st Pass (Fast)**: Opengrep, Bandit, ESLint, gosec — engines within a pass run concurrently
+2. **2nd Pass (Deep)**: CodeQL and SpotBugs
+3. **3rd Stage**: LLM triage — false positive probability, rationale, remediation
+
+Partial results are never silent: a skipped 2nd pass or a truncated triage is
+recorded in `ScanResult.notes`.
 
 ### System Layers
 
-- **Frontend**: React + TypeScript + Tailwind CSS (Web UI, VS Code extension, CLI)
-- **API Gateway**: FastAPI with RBAC authentication
-- **Orchestrator**: Celery + Redis for analysis engine workers
-- **Data**: PostgreSQL (results), Redis (cache/queue), local filesystem (`.opensast-work/` source storage)
+- **Frontend**: React + TypeScript + Tailwind CSS
+- **API**: FastAPI. Routes are thin adapters whose contract is to inject an
+  `ActorContext` into services — see the authorization rule below
+- **Orchestrator**: Celery + Redis
+- **Data**: PostgreSQL (results), Redis (cache/queue), local filesystem (`.opensast-work/`)
 - **LLM**: Ollama + Gemma (offline), Claude API (online)
+
+### Authorization — read this before touching routes
+
+Services **require** an `ActorContext`; passing `None` raises `TypeError`.
+`BaseService._org_filter()` defaults to **deny** — it only passes rows matching
+the actor's `organization_id`. Full access requires `ActorContext.system()`.
+
+- HTTP routes: `Depends(get_actor)` or `Depends(require_actor(*roles))`
+- Unauthenticated paths (login attempts): `ActorContext.anonymous()`
+- CLI / Celery / bootstrap: `ActorContext.system(reason=...)`
+
+Never construct a service without an actor to "make it work". See
+[ADR-0001](docs/adr/0001-authorization-boundary.md).
+
+### Configuration — single source of truth
+
+`opensast/config.py` is the only source of truth for settings. Never hardcode a
+limit, timeout, or path in a service or middleware — read it from `Settings`.
+Docs describe that file; if they disagree, the code wins.
+See [ADR-0002](docs/adr/0002-configuration-single-source.md).
+
+### Schema changes
+
+`alembic/versions/` is the production path. Revision `0001` is **frozen explicit
+DDL** — never reintroduce `Base.metadata.create_all()` there, it breaks the whole
+chain. `db/migrate.py::auto_migrate()` is a development-only fallback, disabled
+in the cloud profile.
 
 ## Tech Stack
 
@@ -54,6 +101,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Encapsulation | 5 | Session Data Exposure, Debug Code |
 | API Misuse | 2 | DNS Lookup Security Decisions, Vulnerable API Usage |
 
+Coverage is currently 46/49. The three uncovered items (SR1-15, SR5-3, SR5-6)
+are C/C++ memory issues, outside the supported language set.
+
 ## Custom Rule Development
 
 Opengrep rules use YAML format with MOIS-specific metadata:
@@ -74,3 +124,12 @@ rules:
 - **HTML**: Interactive web-based reports
 - **PDF**: Official delivery reports (MOIS format compliant)
 - **Excel**: Remediation tracking sheets for auditing
+
+## Working conventions
+
+- Run `pytest` before proposing a change; the suite is fast (~90s) and covers the
+  authorization boundary and known regressions.
+- Path containment is checked with `Path.is_relative_to()`, never string prefixes.
+- Timestamps are timezone-aware UTC everywhere.
+- Failures are isolated per unit (per engine, per finding) and **logged** —
+  never swallowed with a bare `except: pass`.

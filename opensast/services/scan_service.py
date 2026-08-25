@@ -1,4 +1,14 @@
-"""Scan 큐잉·업로드·Git clone·diff·source viewer 서비스."""
+"""Scan 큐잉·업로드·Git clone·diff·source viewer 서비스.
+
+보안 관련 불변식 세 가지를 이 계층에서 강제한다.
+
+1. **스캔 실행은 쓰기 역할만** — `viewer` 는 스캔을 큐잉할 수 없다
+   (ARCHITECTURE §4.3 RBAC 표).
+2. **경로 스캔은 허용 루트 안에서만** — 임의 `source_path` 를 받아 워커 호스트의
+   `/etc` 같은 경로를 스캔하고 소스 뷰어로 읽어내는 경로를 차단한다.
+3. **경로 봉쇄는 `Path.is_relative_to()` 로만** — 문자열 접두사 비교는
+   `/work/sources/ab` 루트에서 `/work/sources/abcd` 를 통과시킨다.
+"""
 
 from __future__ import annotations
 
@@ -19,12 +29,19 @@ from opensast.utils.paths import ensure_dir
 
 log = get_logger(__name__)
 
-_MAX_UPLOAD_BYTES = 500 * 1024 * 1024
 _ALLOWED_SUFFIXES = {".zip"}
+
+#: 스캔을 큐잉할 수 있는 역할 — viewer 제외
+_SCAN_ROLES = ("admin", "analyst")
+
+#: ZIP 최대 압축 확대율. 이 배수를 넘으면 zip bomb 으로 간주하고 거부한다.
+_MAX_ZIP_EXPANSION_RATIO = 100
+#: 압축 해제 후 총 크기 상한 (압축률이 낮은 대용량 아카이브 방어)
+_MAX_ZIP_UNCOMPRESSED_BYTES = 4 * 1024 * 1024 * 1024  # 4 GiB
 
 
 class ScanService(BaseService):
-    def __init__(self, session, actor=None, *, settings: Settings | None = None):
+    def __init__(self, session, actor, *, settings: Settings | None = None):
         super().__init__(session, actor)
         self.settings = settings or get_settings()
 
@@ -38,26 +55,28 @@ class ScanService(BaseService):
         enable_second_pass: bool,
         enable_triage: bool,
     ) -> models.Scan:
+        self.actor.require_role(*_SCAN_ROLES)
         project = ProjectService(self.session, self.actor).get(project_id)
+        resolved = self._validate_source_path(source_path)
         scan_id = uuid.uuid4().hex[:12]
         repo.create_scan_record(
             self.session,
             scan_id=scan_id,
             project_id=project.id,
-            source_path=source_path,
+            source_path=str(resolved),
         )
         self._audit(
             "scan.queue",
             target_type="scan",
             target_id=scan_id,
-            detail={"mode": "path", "path": source_path},
+            detail={"mode": "path", "path": str(resolved)},
         )
         self.session.commit()
         from opensast.orchestrator.tasks import run_scan_task
 
         run_scan_task.delay(
             scan_id,
-            source_path,
+            str(resolved),
             enable_second_pass,
             enable_triage,
             language_hint,
@@ -75,6 +94,7 @@ class ScanService(BaseService):
         enable_second_pass: bool,
         enable_triage: bool,
     ) -> models.Scan:
+        self.actor.require_role(*_SCAN_ROLES)
         project = ProjectService(self.session, self.actor).get(project_id)
         self._validate_archive(archive)
 
@@ -89,6 +109,10 @@ class ScanService(BaseService):
         log.info("scan %s uploaded %d bytes", scan_id, total)
         try:
             self._safe_extract_zip(archive_path, scan_root)
+        except ServiceError:
+            shutil.rmtree(scan_root, ignore_errors=True)
+            archive_path.unlink(missing_ok=True)
+            raise
         except Exception as exc:
             shutil.rmtree(scan_root, ignore_errors=True)
             archive_path.unlink(missing_ok=True)
@@ -132,6 +156,7 @@ class ScanService(BaseService):
         enable_second_pass: bool,
         enable_triage: bool,
     ) -> models.Scan:
+        self.actor.require_role(*_SCAN_ROLES)
         project = ProjectService(self.session, self.actor).get(project_id)
         scan_id = uuid.uuid4().hex[:12]
         repo.create_scan_record(
@@ -166,22 +191,33 @@ class ScanService(BaseService):
         scan = self.session.get(models.Scan, scan_id)
         if scan is None:
             raise ServiceError("scan not found", status_code=status.HTTP_404_NOT_FOUND)
-        # 조직 스코핑: scan 이 속한 project 의 org_id 검증
-        org_id = self.actor.organization_id if self.actor else None
-        if org_id is not None:
+        # 조직 스코핑: scan 이 속한 project 의 org_id 검증 (system 컨텍스트는 우회)
+        if not self.actor.is_system:
             project = self.session.get(models.Project, scan.project_id)
-            if project is None or project.organization_id != org_id:
-                raise ServiceError("scan not found", status_code=status.HTTP_404_NOT_FOUND)
+            if project is None:
+                raise ServiceError(
+                    "scan not found", status_code=status.HTTP_404_NOT_FOUND
+                )
+            self._assert_org(project, label="scan")
         return scan
 
     def list_for_project(self, project_id: int) -> list[models.Scan]:
-        # project 접근 검증은 라우트에서 ProjectService.get 으로 수행
+        # 프로젝트 접근 권한을 여기서 검증한다 — 라우트에 의존하지 않는다.
+        ProjectService(self.session, self.actor).get(project_id)
         return repo.list_scans_for_project(self.session, project_id)
 
+    def status_snapshot(self, scan_id: str) -> dict:
+        """SSE 스트리밍용 경량 상태 조회 (권한 검증 포함)."""
+
+        scan = self.get(scan_id)
+        return {
+            "scan_id": scan.id,
+            "status": scan.status,
+            "error": scan.error,
+        }
+
     # ---- diff --------------------------------------------------------
-    def diff(
-        self, scan_id: str, *, base: str | None = None
-    ) -> dict:
+    def diff(self, scan_id: str, *, base: str | None = None) -> dict:
         head = self.get(scan_id)
         if base is None:
             prev = self.session.scalars(
@@ -196,7 +232,8 @@ class ScanService(BaseService):
             ).first()
             base_scan_id = prev.id if prev else None
         else:
-            base_scan_id = base
+            # 명시적 base 도 동일한 접근 검증을 거친다 (교차 조직 diff 차단)
+            base_scan_id = self.get(base).id
 
         head_rows = list(
             self.session.scalars(
@@ -247,11 +284,16 @@ class ScanService(BaseService):
                 "소스 디렉터리가 정리되어 더 이상 조회할 수 없습니다",
                 status_code=status.HTTP_410_GONE,
             )
-        candidate = (root / path).resolve()
         root_resolved = root.resolve()
-        if not str(candidate).startswith(str(root_resolved)):
+        candidate = (root_resolved / path).resolve()
+        if not _is_contained(candidate, root_resolved):
             raise ServiceError(
                 "경로가 소스 루트를 벗어납니다",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        if candidate.is_symlink():
+            raise ServiceError(
+                "심볼릭 링크는 조회할 수 없습니다",
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
         if not candidate.exists() or not candidate.is_file():
@@ -276,6 +318,48 @@ class ScanService(BaseService):
         }
 
     # ---- 내부 헬퍼 ---------------------------------------------------
+    def _validate_source_path(self, source_path: str) -> Path:
+        """경로 스캔 대상이 허용 루트 안에 있는지 검증한다.
+
+        허용 루트는 `settings.scan_allowed_source_roots` 이며 기본값은
+        `work_dir` 하나다. 즉 기본 구성에서는 업로드·clone 으로 만들어진 작업
+        디렉터리만 스캔할 수 있고, 워커 호스트의 임의 경로는 거부된다.
+        """
+
+        raw = (source_path or "").strip()
+        if not raw:
+            raise ServiceError("source_path is required")
+        candidate = Path(raw).expanduser()
+        if not candidate.is_absolute():
+            candidate = (Path(self.settings.work_dir) / candidate)
+        candidate = candidate.resolve()
+
+        allowed = self.settings.allowed_source_roots()
+        if not any(_is_contained(candidate, root) for root in allowed):
+            log.warning(
+                "rejected out-of-scope scan path %s (actor=%s)",
+                candidate,
+                self.actor.user_id,
+            )
+            self._audit(
+                "scan.path_rejected",
+                target_type="scan",
+                detail={"path": str(candidate)},
+            )
+            self.session.commit()
+            raise ServiceError(
+                "허용되지 않은 스캔 경로입니다. "
+                "OPENSAST_SCAN_ALLOWED_SOURCE_ROOTS 에 등록된 디렉터리 하위만 "
+                "스캔할 수 있습니다.",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+        if not candidate.exists() or not candidate.is_dir():
+            raise ServiceError(
+                "source_path 가 존재하지 않거나 디렉터리가 아닙니다",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        return candidate
+
     @staticmethod
     def _validate_archive(archive: UploadFile) -> None:
         name = (archive.filename or "").lower()
@@ -286,8 +370,8 @@ class ScanService(BaseService):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-    @staticmethod
-    def _stream_upload(archive: UploadFile, dest: Path) -> int:
+    def _stream_upload(self, archive: UploadFile, dest: Path) -> int:
+        limit = self.settings.max_upload_bytes
         total = 0
         chunk_size = 1024 * 1024
         with dest.open("wb") as f:
@@ -296,10 +380,11 @@ class ScanService(BaseService):
                 if not chunk:
                     break
                 total += len(chunk)
-                if total > _MAX_UPLOAD_BYTES:
+                if total > limit:
+                    f.close()
                     dest.unlink(missing_ok=True)
                     raise ServiceError(
-                        f"업로드 크기 제한 초과 ({_MAX_UPLOAD_BYTES} bytes)",
+                        f"업로드 크기 제한 초과 ({limit} bytes)",
                         status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                     )
                 f.write(chunk)
@@ -307,12 +392,45 @@ class ScanService(BaseService):
 
     @staticmethod
     def _safe_extract_zip(archive_path: Path, dest_dir: Path) -> None:
+        """경로 탈출과 zip bomb 을 모두 막으면서 압축을 해제한다."""
+
         dest_resolved = dest_dir.resolve()
+        compressed_total = 0
+        uncompressed_total = 0
         with zipfile.ZipFile(archive_path) as zf:
             for member in zf.infolist():
-                member_path = (dest_dir / member.filename).resolve()
-                if not str(member_path).startswith(str(dest_resolved)):
-                    raise ValueError(
-                        f"zip 엔트리가 대상 경로를 벗어납니다: {member.filename}"
+                member_path = (dest_resolved / member.filename).resolve()
+                if not _is_contained(member_path, dest_resolved):
+                    raise ServiceError(
+                        f"zip 엔트리가 대상 경로를 벗어납니다: {member.filename}",
+                        status_code=status.HTTP_400_BAD_REQUEST,
                     )
+                compressed_total += member.compress_size
+                uncompressed_total += member.file_size
+            if uncompressed_total > _MAX_ZIP_UNCOMPRESSED_BYTES:
+                raise ServiceError(
+                    "압축 해제 후 크기가 상한을 초과합니다 "
+                    f"({uncompressed_total} > {_MAX_ZIP_UNCOMPRESSED_BYTES} bytes)",
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                )
+            if (
+                compressed_total > 0
+                and uncompressed_total / compressed_total > _MAX_ZIP_EXPANSION_RATIO
+            ):
+                raise ServiceError(
+                    "압축 확대율이 비정상적으로 높습니다 (zip bomb 의심)",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
             zf.extractall(dest_dir)
+
+
+def _is_contained(candidate: Path, root: Path) -> bool:
+    """`candidate` 가 `root` 하위(또는 root 자신)인지 판정한다.
+
+    문자열 접두사 비교(`startswith`)는 형제 디렉터리를 통과시키므로 쓰지 않는다.
+    """
+
+    try:
+        return candidate == root or candidate.is_relative_to(root)
+    except (ValueError, OSError):
+        return False

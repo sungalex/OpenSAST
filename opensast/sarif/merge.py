@@ -14,7 +14,13 @@ def merge_findings(
 
     중복 기준:
       * `finding_id`가 동일한 경우 (엔진·규칙·파일·라인·MOIS ID 일치)
-      * `dedupe_same_location`이 True면 동일 파일/라인/CWE 조합도 중복으로 간주
+      * `dedupe_same_location`이 True면 동일 파일/라인/CWE/규칙 조합도 중복으로 간주
+
+    **규칙 ID 를 키에 포함하는 이유 (M-1)**: 예전 키는 `(파일, 라인, CWE)` 였는데,
+    CWE 매핑이 없는 Finding 들은 CWE 튜플이 모두 비어 있어 같은 줄의 서로 다른
+    규칙 탐지가 하나로 붕괴했다. LLM 단계에서는 "원본 제거 금지" 를 강제하면서
+    병합 단계에서 조용히 버리는 것은 행안부 대응 관점에서 감사 리스크다.
+    CWE 가 없는 경우에는 규칙 ID 로 구분해 서로 다른 탐지를 보존한다.
     """
 
     flat: list[Finding] = [f for group in groups for f in group]
@@ -24,12 +30,16 @@ def merge_findings(
     if not dedupe_same_location:
         return list(by_id.values())
 
-    bucket: dict[tuple[str, int, tuple[str, ...]], Finding] = {}
+    bucket: dict[tuple[str, int, tuple[str, ...], str], Finding] = {}
     for f in by_id.values():
+        cwe_key = tuple(sorted(f.cwe_ids))
+        # CWE 로 동치성을 판단할 수 없으면 규칙 ID 로 대체한다.
+        rule_key = "" if cwe_key else f.rule_id
         key = (
             f.location.file_path,
             f.location.start_line,
-            tuple(sorted(f.cwe_ids)),
+            cwe_key,
+            rule_key,
         )
         existing = bucket.get(key)
         if existing is None or _prefers(f, existing):

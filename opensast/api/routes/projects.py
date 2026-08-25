@@ -2,42 +2,32 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from opensast.api.deps import get_current_user, get_db
+from opensast.api.deps import WRITE_ROLES, get_actor, get_db, require_actor
 from opensast.api.schemas import ProjectCreate, ProjectOut
-from opensast.db import models
 from opensast.services import ActorContext, ProjectService, ServiceError
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 
-def _actor(request: Request, user: models.User) -> ActorContext:
-    return ActorContext(
-        user=user,
-        ip=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent"),
-    )
-
-
 @router.get("", response_model=list[ProjectOut])
 def list_projects_route(
     db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
+    actor: ActorContext = Depends(get_actor),
 ) -> list[ProjectOut]:
-    svc = ProjectService(db)
+    svc = ProjectService(db, actor)
     return [ProjectOut.model_validate(p) for p in svc.list_all()]
 
 
 @router.post("", response_model=ProjectOut, status_code=status.HTTP_201_CREATED)
 def create_project_route(
     payload: ProjectCreate,
-    request: Request,
     db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
+    actor: ActorContext = Depends(require_actor(*WRITE_ROLES)),
 ) -> ProjectOut:
-    svc = ProjectService(db, _actor(request, user))
+    svc = ProjectService(db, actor)
     try:
         project = svc.create(
             name=payload.name,
@@ -54,9 +44,9 @@ def create_project_route(
 def get_project_route(
     project_id: int,
     db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
+    actor: ActorContext = Depends(get_actor),
 ) -> ProjectOut:
-    svc = ProjectService(db)
+    svc = ProjectService(db, actor)
     try:
         project = svc.get(project_id)
     except ServiceError as exc:

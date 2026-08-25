@@ -8,6 +8,13 @@
 
 프로파일이 달라도 코드베이스는 동일하며, 미들웨어·로그 레벨·기본 CORS·문서 노출·
 rate limit 임계값 같은 보안·운영 관련 기본값만 조정된다.
+
+**설정 진실의 원천은 이 파일 하나다 (ADR-002).** 서비스·미들웨어는 상수를
+하드코딩하지 않고 반드시 `Settings` 에서 읽는다. 문서(ARCHITECTURE §2.4)의 표는
+이 파일을 서술할 뿐이며, 불일치가 생기면 이 파일이 정본이다.
+
+우선순위(낮음 → 높음):
+  프로파일 기본값 → 오버레이 YAML(`OPENSAST_OVERLAY_CONFIG`) → 환경변수 / .env
 """
 
 from __future__ import annotations
@@ -15,9 +22,10 @@ from __future__ import annotations
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
+from typing import Annotated, Any
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_RULES_DIR = PROJECT_ROOT / "rules"
@@ -28,7 +36,16 @@ DEFAULT_RESOURCES_DIR = PROJECT_ROOT / "opensast" / "resources"
 # 와 동기화하기 위해 `<cwd>/.opensast-work` 를 기본으로 사용. Docker 환경에서는
 # compose 가 OPENSAST_WORK_DIR=/var/opensast-work 를 명시 주입하고, 호스트의
 # `./.opensast-work` 를 bind-mount 해 프로젝트 폴더와 생명주기를 일치시킨다.
+#
+# API 와 워커가 서로 다른 CWD 로 기동하면 같은 상대 경로가 다른 절대 경로로
+# 해석되므로, 다중 프로세스 배포에서는 OPENSAST_WORK_DIR 을 반드시 명시한다.
 DEFAULT_WORK_DIR = Path.cwd() / ".opensast-work"
+
+
+def _default_work_dir() -> Path:
+    """인스턴스 생성 시점의 CWD 를 기준으로 평가한다 (import 시점 고정 회피)."""
+
+    return Path.cwd() / ".opensast-work"
 
 
 class Profile(str, Enum):
@@ -47,6 +64,8 @@ _PROFILE_DEFAULTS: dict[Profile, dict[str, object]] = {
         "db_pool_size": 5,
         "enforce_strong_secret": False,
         "enforce_https": False,
+        "fail_fast_on_config_warning": False,
+        "auto_migrate_on_startup": True,
     },
     Profile.DOCKER: {
         "cors_origins": [
@@ -60,6 +79,8 @@ _PROFILE_DEFAULTS: dict[Profile, dict[str, object]] = {
         "db_pool_size": 10,
         "enforce_strong_secret": False,
         "enforce_https": False,
+        "fail_fast_on_config_warning": False,
+        "auto_migrate_on_startup": True,
     },
     Profile.CLOUD: {
         "cors_origins": [],  # 운영은 env 로 명시 주입 필수
@@ -70,6 +91,10 @@ _PROFILE_DEFAULTS: dict[Profile, dict[str, object]] = {
         "db_pool_size": 20,
         "enforce_strong_secret": True,
         "enforce_https": True,
+        # 운영에서는 약한 시크릿·빈 CORS 로 기동하지 못하게 막는다 (ADR-002)
+        "fail_fast_on_config_warning": True,
+        # 프로덕션 스키마는 alembic upgrade head 로만 변경한다 (ADR-002)
+        "auto_migrate_on_startup": False,
     },
 }
 
@@ -86,26 +111,36 @@ class Settings(BaseSettings):
     project_root: Path = PROJECT_ROOT
     rules_dir: Path = DEFAULT_RULES_DIR
     resources_dir: Path = DEFAULT_RESOURCES_DIR
-    work_dir: Path = DEFAULT_WORK_DIR
+    work_dir: Path = Field(default_factory=_default_work_dir)
 
     # ---- 커스터마이징 오버레이 -----------------------------------------
     # 사용자가 패키지 업그레이드 후에도 보존할 리소스·룰 경로
     custom_rules_dir: Path | None = None
+    #: 리소스 오버라이드 디렉터리. 여기에 `mois_catalog.yaml` /
+    #: `reference_standards.yaml` 을 두면 개별 경로를 지정하지 않아도 적용된다.
     custom_resources_dir: Path | None = None
     mois_catalog_path: Path | None = None  # YAML 파일로 49개 카탈로그 완전 교체
     reference_standards_path: Path | None = None
+    #: 설정 오버레이 YAML (ARCHITECTURE §5.5). 환경변수보다 낮은 우선순위.
+    overlay_config: Path | None = None
 
     # ---- Database / Queue ----------------------------------------------
     database_url: str = "postgresql+psycopg2://opensast:opensast@localhost:5432/opensast"
     db_pool_size: int = 5
+    db_max_overflow: int = 10
+    db_pool_recycle_seconds: int = 1800
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"
+    #: 기동 시 `auto_migrate` 실행 여부. 프로덕션은 alembic 을 쓰므로 False.
+    auto_migrate_on_startup: bool = True
 
     # ---- Auth ----------------------------------------------------------
     secret_key: str = "change-me-in-production-please-32-chars-min"
     access_token_expire_minutes: int = 60 * 24
     enforce_strong_secret: bool = False
+    #: 설정 경고를 기동 실패로 승격할지 여부 (cloud 프로파일 기본값 True)
+    fail_fast_on_config_warning: bool = False
     password_min_length: int = 12
     password_required_classes: int = 3  # upper/lower/digit/special 중 N종 이상
     failed_login_threshold: int = 5
@@ -123,7 +158,9 @@ class Settings(BaseSettings):
     bootstrap_admin_display_name: str = "OpenSAST Admin"
 
     # ---- HTTP / 보안 ----------------------------------------------------
-    cors_origins: list[str] = Field(default_factory=lambda: ["*"])
+    cors_origins: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["*"]
+    )
     enable_docs: bool = True
     enforce_https: bool = False
     rate_limit_per_minute: int = 0  # 0 = 비활성
@@ -132,6 +169,14 @@ class Settings(BaseSettings):
     security_headers_enabled: bool = True
     log_level: str = "INFO"
     log_format: str = "console"  # console | json
+
+    # ---- 스캔 대상 경로 허용 목록 ---------------------------------------
+    #: `POST /api/scans` 의 `source_path` 로 허용할 루트 디렉터리 목록.
+    #: 비워두면 `work_dir` 하나만 허용한다. 워커 호스트의 임의 경로를 스캔한 뒤
+    #: 소스 뷰어로 읽어내는 경로를 차단하기 위한 방어선이다.
+    scan_allowed_source_roots: Annotated[list[Path], NoDecode] = Field(
+        default_factory=list
+    )
 
     # ---- LLM -----------------------------------------------------------
     llm_provider: str = Field(default="ollama")
@@ -142,12 +187,27 @@ class Settings(BaseSettings):
     llm_timeout_seconds: int = 60
     llm_context_window_lines: int = 20
     llm_default_fp_probability: int = 50
+    #: triage 동시 LLM 호출 수. Ollama 단일 인스턴스는 낮게(2~4) 잡는다.
+    llm_max_concurrency: int = 4
+    #: 한 번의 triage 에서 처리할 Finding 최대 개수 (0 = 무제한).
+    #: 초과분은 severity 순으로 잘리며, 잘렸다는 사실이 결과에 기록된다.
+    triage_max_findings: int = 2000
+    #: triage 결과 Redis 캐시 TTL (초). 0 이면 캐시 비활성.
+    triage_cache_ttl_seconds: int = 86400
 
     # ---- Celery task timeouts -----------------------------------------
     scan_task_soft_time_limit: int = 3600
     scan_task_time_limit: int = 7200
     triage_task_soft_time_limit: int = 1800
     triage_task_time_limit: int = 2400
+
+    # ---- 파이프라인 ------------------------------------------------------
+    #: 1차/2차 Pass 안에서 엔진을 동시에 실행할 개수 (1 = 순차).
+    engine_max_concurrency: int = 4
+
+    # ---- 조회 상한 -------------------------------------------------------
+    #: 스캔별 Finding 조회 기본 상한. 초과 시 응답에 절단 사실을 표시한다.
+    findings_page_limit: int = 1000
 
     # ---- Engine binaries -----------------------------------------------
     opengrep_bin: str = "semgrep"
@@ -168,6 +228,52 @@ class Settings(BaseSettings):
             return items or ["*"]
         return v
 
+    @field_validator("scan_allowed_source_roots", mode="before")
+    @classmethod
+    def _parse_roots(cls, v):
+        """콜론 또는 콤마 구분 문자열도 허용."""
+
+        if isinstance(v, str):
+            sep = ":" if ":" in v and "," not in v else ","
+            return [s.strip() for s in v.split(sep) if s.strip()]
+        return v
+
+    # ---- 파생 값 --------------------------------------------------------
+    def allowed_source_roots(self) -> list[Path]:
+        """스캔 대상으로 허용된 루트 디렉터리의 정규화된 목록."""
+
+        roots = list(self.scan_allowed_source_roots) or [Path(self.work_dir)]
+        out: list[Path] = []
+        for r in roots:
+            try:
+                out.append(Path(r).expanduser().resolve())
+            except (OSError, RuntimeError):  # pragma: no cover - 방어
+                continue
+        return out
+
+    def resolved_mois_catalog_path(self) -> Path | None:
+        """MOIS 카탈로그 오버라이드 경로 (명시 경로 → 리소스 디렉터리 순)."""
+
+        if self.mois_catalog_path:
+            return Path(self.mois_catalog_path)
+        if self.custom_resources_dir:
+            candidate = Path(self.custom_resources_dir) / "mois_catalog.yaml"
+            if candidate.exists():
+                return candidate
+        return None
+
+    def resolved_reference_standards_path(self) -> Path | None:
+        """레퍼런스 표준 오버라이드 경로 (명시 경로 → 리소스 디렉터리 순)."""
+
+        if self.reference_standards_path:
+            return Path(self.reference_standards_path)
+        if self.custom_resources_dir:
+            candidate = Path(self.custom_resources_dir) / "reference_standards.yaml"
+            if candidate.exists():
+                return candidate
+        return None
+
+    # ---- 프로파일 / 검증 -------------------------------------------------
     def apply_profile_defaults(self) -> "Settings":
         """프로파일별 기본값을 아직 명시되지 않은 필드에만 적용."""
 
@@ -196,6 +302,10 @@ class Settings(BaseSettings):
             warnings.append(
                 "[cloud] OPENSAST_CORS_ORIGINS 가 비어있음 — 운영에서는 명시 필요"
             )
+        if self.profile is Profile.CLOUD and "*" in self.cors_origins:
+            warnings.append(
+                "[cloud] OPENSAST_CORS_ORIGINS 에 와일드카드('*') 사용 불가"
+            )
         if (
             self.profile is Profile.CLOUD
             and self.bootstrap_admin_password == "opensast-admin"
@@ -205,10 +315,90 @@ class Settings(BaseSettings):
             )
         return warnings
 
+    def enforce_startup_policy(self) -> list[str]:
+        """기동 시 설정 검증. `fail_fast_on_config_warning` 이면 예외를 던진다.
+
+        Returns: 경고 목록 (fail-fast 가 아닐 때).
+        Raises: RuntimeError — 운영 프로파일에서 안전하지 않은 기본값 감지 시.
+        """
+
+        warnings = self.validate_profile()
+        if warnings and self.fail_fast_on_config_warning:
+            joined = "\n  - ".join(warnings)
+            raise RuntimeError(
+                "안전하지 않은 설정으로 기동할 수 없습니다 "
+                f"(profile={self.profile.value}):\n  - {joined}\n"
+                "값을 수정하거나 OPENSAST_FAIL_FAST_ON_CONFIG_WARNING=false 로 "
+                "명시적으로 완화하세요."
+            )
+        return warnings
+
+
+# ---------------------------------------------------------------------------
+# 오버레이 YAML (ARCHITECTURE §5.5)
+# ---------------------------------------------------------------------------
+
+
+def _flatten_overlay(data: dict[str, Any]) -> dict[str, Any]:
+    """1단계 중첩 섹션을 `섹션_키` 형태로 평탄화한다.
+
+    `{"llm": {"provider": "anthropic"}}` → `{"llm_provider": "anthropic"}`
+    """
+
+    flat: dict[str, Any] = {}
+    for key, value in (data or {}).items():
+        if isinstance(value, dict):
+            for sub, sub_value in value.items():
+                flat[f"{key}_{sub}"] = sub_value
+        else:
+            flat[key] = value
+    return flat
+
+
+def load_overlay(path: Path) -> dict[str, Any]:
+    """오버레이 YAML 을 읽어 `Settings` 필드명 기준 dict 로 반환한다.
+
+    `Settings` 에 없는 키는 경고 후 무시한다 — 오타가 조용히 삼켜지지 않도록.
+    """
+
+    import yaml
+
+    from opensast.utils.logging import get_logger
+
+    log = get_logger(__name__)
+    try:
+        raw = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+    except Exception as exc:  # noqa: BLE001
+        log.warning("설정 오버레이 로드 실패 %s: %s", path, exc)
+        return {}
+    if not isinstance(raw, dict):
+        log.warning("설정 오버레이 최상위가 매핑이 아님: %s", path)
+        return {}
+
+    flat = _flatten_overlay(raw)
+    known = set(Settings.model_fields)
+    out: dict[str, Any] = {}
+    for key, value in flat.items():
+        if key in known:
+            out[key] = value
+        else:
+            log.warning("설정 오버레이의 알 수 없는 키 무시: %r (%s)", key, path)
+    return out
+
 
 @lru_cache
 def get_settings() -> Settings:
+    # 1) 환경변수 / .env 만으로 1차 로드 — 오버레이 경로를 알아내기 위함
     settings = Settings()
+    overlay_path = settings.overlay_config
+    if overlay_path and Path(overlay_path).exists():
+        overlay = load_overlay(Path(overlay_path))
+        if overlay:
+            # 2) 오버레이를 기본값 자리에 넣고 재구성.
+            #    환경변수는 pydantic-settings 우선순위에 따라 여전히 최상위다.
+            explicit = settings.model_fields_set - {"overlay_config"}
+            merged = {k: v for k, v in overlay.items() if k not in explicit}
+            settings = Settings(**merged)
     settings.apply_profile_defaults()
     return settings
 

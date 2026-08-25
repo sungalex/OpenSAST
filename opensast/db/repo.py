@@ -5,9 +5,9 @@ API·Celery 태스크가 공용으로 사용하는 read/write 연산을 얇게 �
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from opensast.config import Settings, get_settings
@@ -17,6 +17,17 @@ from opensast.models import ScanResult
 from opensast.utils.logging import get_logger
 
 log = get_logger(__name__)
+
+
+def _utcnow() -> datetime:
+    """타임존 인식 UTC 현재시각.
+
+    도메인 모델은 aware, repo 는 naive(`datetime.utcnow()`)를 쓰던 혼용을
+    제거한다 (M-6). 감사 로그·스캔 타임스탬프가 증적이 되는 도메인에서
+    naive/aware 혼용은 비교 오류나 9시간 오차로 이어진다.
+    """
+
+    return datetime.now(timezone.utc)
 
 
 def ensure_bootstrap_admin(
@@ -106,7 +117,7 @@ def mark_scan_running(session: Session, scan_id: str) -> None:
     if scan is None:
         return
     scan.status = "running"
-    scan.started_at = datetime.utcnow()
+    scan.started_at = _utcnow()
 
 
 def mark_scan_failed(session: Session, scan_id: str, *, error: str) -> None:
@@ -115,17 +126,27 @@ def mark_scan_failed(session: Session, scan_id: str, *, error: str) -> None:
         return
     scan.status = "failed"
     scan.error = error
-    scan.finished_at = datetime.utcnow()
+    scan.finished_at = _utcnow()
 
 
 def persist_scan_result(
     session: Session, scan_id: str, result: ScanResult
-) -> None:
+) -> int:
+    """스캔 결과를 저장한다. **멱등**하다 (H-5).
+
+    Celery 태스크는 `autoretry_for=(Exception,)` 로 재시도되므로, 저장 도중
+    워커가 죽으면 같은 스캔이 다시 실행된다. 이미 저장된 `finding_hash` 는
+    건너뛰어 Finding 이 2~3배로 쌓이는 것을 막는다. DB 에도
+    `uq_findings_scan_hash` 유니크 제약이 걸려 있어 경쟁 상태에서도 안전하다.
+
+    Returns: 이번 호출에서 새로 삽입한 Finding 개수.
+    """
+
     import fnmatch
 
     scan = session.get(models.Scan, scan_id)
     if scan is None:
-        return
+        return 0
     scan.status = "completed"
     scan.started_at = result.started_at
     scan.finished_at = result.finished_at
@@ -156,42 +177,41 @@ def persist_scan_result(
                 return True
         return False
 
+    existing_hashes = set(
+        session.scalars(
+            select(models.Finding.finding_hash).where(
+                models.Finding.scan_id == scan_id
+            )
+        )
+    )
+    inserted = 0
+    seen: set[str] = set()
     for dom in result.findings:
+        if dom.finding_id in existing_hashes or dom.finding_id in seen:
+            continue
+        seen.add(dom.finding_id)
         row = _finding_from_domain(scan_id, dom)
         if _is_suppressed(dom):
             row.status = "excluded"
             row.status_reason = "auto-suppressed by project suppression rule"
         session.add(row)
+        inserted += 1
+    if existing_hashes:
+        log.info(
+            "scan %s: %d findings already persisted, inserted %d new",
+            scan_id,
+            len(existing_hashes),
+            inserted,
+        )
+    return inserted
 
 
 def _finding_from_domain(scan_id: str, dom: DomainFinding) -> models.Finding:
-    row = models.Finding(
-        scan_id=scan_id,
-        finding_hash=dom.finding_id,
-        rule_id=dom.rule_id,
-        engine=dom.engine,
-        message=dom.message,
-        severity=dom.severity.value,
-        file_path=dom.location.file_path,
-        start_line=dom.location.start_line,
-        end_line=dom.location.end_line,
-        cwe_ids=list(dom.cwe_ids),
-        mois_id=dom.mois_id,
-        category=dom.category,
-        language=dom.language,
-        snippet=dom.location.snippet,
-        raw=dom.raw,
-    )
-    if dom.triage is not None:
-        row.triage = models.TriageRecord(
-            verdict=dom.triage.verdict,
-            fp_probability=dom.triage.fp_probability,
-            rationale=dom.triage.rationale,
-            recommended_fix=dom.triage.recommended_fix,
-            patched_code=dom.triage.patched_code,
-            model=dom.triage.model,
-        )
-    return row
+    """도메인 → ORM 변환 (구현은 `opensast.db.mapping` 단일 출처)."""
+
+    from opensast.db.mapping import finding_to_orm
+
+    return finding_to_orm(scan_id, dom)
 
 
 def list_scans_for_project(
@@ -231,19 +251,42 @@ def record_audit(
     return entry
 
 
-def list_findings_for_scan(
-    session: Session, scan_id: str, *, limit: int = 1000
-) -> list[models.Finding]:
-    return list(
-        session.scalars(
-            select(models.Finding)
-            .options(selectinload(models.Finding.triage))
-            .where(models.Finding.scan_id == scan_id)
-            .order_by(
-                models.Finding.severity.asc(),
-                models.Finding.file_path.asc(),
-                models.Finding.start_line.asc(),
+def count_findings_for_scan(session: Session, scan_id: str) -> int:
+    return (
+        session.scalar(
+            select(func.count(models.Finding.id)).where(
+                models.Finding.scan_id == scan_id
             )
-            .limit(limit)
         )
+        or 0
     )
+
+
+def list_findings_for_scan(
+    session: Session,
+    scan_id: str,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+) -> list[models.Finding]:
+    """스캔의 Finding 을 severity(HIGH→MEDIUM→LOW) 순으로 반환한다.
+
+    `limit=None` 이면 전부 반환한다. 예전에는 기본 1000 건에서 **조용히**
+    잘렸는데, 진단 도구에서 그 절단은 커버리지 누락으로 직결된다 (M-3).
+    호출자는 `count_findings_for_scan()` 으로 전체 건수를 확인할 수 있다.
+    """
+
+    stmt = (
+        select(models.Finding)
+        .options(selectinload(models.Finding.triage))
+        .where(models.Finding.scan_id == scan_id)
+        .order_by(
+            models.severity_order(),
+            models.Finding.file_path.asc(),
+            models.Finding.start_line.asc(),
+        )
+        .offset(offset)
+    )
+    if limit is not None:
+        stmt = stmt.limit(limit)
+    return list(session.scalars(stmt))

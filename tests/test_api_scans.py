@@ -9,14 +9,17 @@ from fastapi.testclient import TestClient
 
 
 def test_queue_scan_returns_202(
-    client: TestClient, admin_headers: dict[str, str], sample_project: dict
+    client: TestClient,
+    admin_headers: dict[str, str],
+    sample_project: dict,
+    allowed_scan_root,
 ) -> None:
     r = client.post(
         "/api/scans",
         headers=admin_headers,
         json={
             "project_id": sample_project["id"],
-            "source_path": "/tmp/foo",
+            "source_path": str(allowed_scan_root),
             "enable_second_pass": False,
             "enable_triage": False,
         },
@@ -25,7 +28,7 @@ def test_queue_scan_returns_202(
     body = r.json()
     assert body["status"] == "queued"
     assert body["project_id"] == sample_project["id"]
-    assert body["source_path"] == "/tmp/foo"
+    assert body["source_path"] == str(allowed_scan_root)
 
 
 def test_queue_scan_unknown_project_404(

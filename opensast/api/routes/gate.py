@@ -2,36 +2,29 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from opensast.api.deps import get_current_user, get_db
+from opensast.api.deps import ROLE_ADMIN, get_actor, get_db, require_actor
 from opensast.api.schemas import (
     GateCheckRequest,
     GateCheckResult,
     GatePolicyIn,
     GatePolicyOut,
 )
-from opensast.db import models
 from opensast.services import ActorContext, GateService, ServiceError
 
 router = APIRouter(prefix="/api/gate", tags=["gate"])
 
 
-def _actor(request: Request, user: models.User) -> ActorContext:
-    return ActorContext(
-        user=user, ip=request.client.host if request.client else None
-    )
-
 
 @router.put("/policy", response_model=GatePolicyOut)
 def upsert_policy(
     payload: GatePolicyIn,
-    request: Request,
     db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
+    actor: ActorContext = Depends(require_actor(ROLE_ADMIN)),
 ) -> GatePolicyOut:
-    svc = GateService(db, _actor(request, user))
+    svc = GateService(db, actor)
     try:
         row = svc.upsert_policy(
             project_id=payload.project_id,
@@ -51,10 +44,10 @@ def upsert_policy(
 def get_policy(
     project_id: int,
     db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
+    actor: ActorContext = Depends(get_actor),
 ) -> GatePolicyOut:
     try:
-        row = GateService(db).get_policy(project_id)
+        row = GateService(db, actor).get_policy(project_id)
     except ServiceError as exc:
         raise exc.as_http() from exc
     return GatePolicyOut.model_validate(row)
@@ -63,11 +56,10 @@ def get_policy(
 @router.post("/check", response_model=GateCheckResult)
 def check_gate(
     payload: GateCheckRequest,
-    request: Request,
     db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
+    actor: ActorContext = Depends(get_actor),
 ) -> GateCheckResult:
-    svc = GateService(db, _actor(request, user))
+    svc = GateService(db, actor)
     try:
         result = svc.check(
             project_id=payload.project_id,
