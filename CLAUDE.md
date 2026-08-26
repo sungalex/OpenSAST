@@ -1,156 +1,127 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+**OpenSAST** — 행정안전부 「소프트웨어 보안약점 진단가이드」 구현단계 **49개 항목**을
+커버하는 다중 엔진 SAST 오케스트레이터. Python 3.12 · FastAPI · Celery · React.
 
-## Project Overview
+이 파일은 **항상 참인 것**만 담는다. 경로별 상세 규칙은 `.claude/rules/` 가
+해당 파일을 열 때 자동으로 붙고, 절차는 `.claude/skills/` 가 호출될 때 붙는다.
 
-**OpenSAST** is an open-source SAST (Static Application Security Testing) tool designed to detect the 49 security weaknesses defined in Korea's Ministry of Public Administration and Security (MOIS) guidelines for public sector software development.
+## 어디가 정본인가
 
-### Core Design Principles
-
-- **Multi-engine orchestration**: Combines multiple open-source SAST engines (Opengrep, CodeQL, SpotBugs, Bandit, ESLint, gosec) to maximize detection and minimize false positives.
-  **The engine set is scheduled to change**: [ADR-0001](docs/adr/0001-unified-analysis-pipeline.md)
-  (Accepted 2026-08-26) drops CodeQL and ESLint for Joern. Not implemented yet —
-  do not remove those adapters until ADR-0002 is revised and accepted.
-- **CWE-based rule mapping**: Maps all 49 MOIS security weakness items to CWE IDs
-- **LLM-based false positive filtering**: Uses AI (Ollama/Gemma locally, Claude API for cloud) to classify results — it **annotates, never removes**, original findings
-- **YAML-based custom rules**: Extensible rule system for Opengrep
-
-## Documentation map
-
-Docs are split by *when they are true* — see [ADR-0007](docs/adr/0007-documentation-architecture.md).
-Keep this file in sync with `docs/ARCHITECTURE.md`; it is a summary, not a second source of truth.
-
-| Question | Document |
+| 질문 | 문서 |
 |---|---|
-| What exists right now | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (as-built) |
-| Why it was built this way | [`docs/adr/`](docs/adr/README.md) |
-| What is planned | [`docs/ROADMAP.md`](docs/ROADMAP.md) |
-| How to use it | [`docs/guide/`](docs/guide/README.md) |
-| What it looked like back then | [`docs/reviews/`](docs/reviews/) (frozen) |
-| **Every document, classified** | [`docs/README.md`](docs/README.md) |
+| 지금 무엇이 있는가 | `docs/ARCHITECTURE.md` (as-built) |
+| 왜 그렇게 만들었는가 | `docs/adr/` ([색인](docs/adr/README.md)) |
+| 무엇을 할 것인가 | `docs/ROADMAP.md` |
+| 어떻게 쓰는가 | `docs/guide/` |
+| 그때는 어땠는가 | `docs/reviews/` (동결) |
+| 모든 문서, 성격별 | `docs/README.md` |
 
-**Write an ADR** when a change is hard to reverse, real alternatives existed, or
-someone will later ask "why is it like this?"
+**코드와 문서가 어긋나면 코드가 정본이다.** 이 파일은 ARCHITECTURE 의 요약이지
+두 번째 진실의 원천이 아니다.
 
-**Before writing one, read [`docs/adr/README.md`](docs/adr/README.md) and take the
-next unused number.** Numbering is by creation order and the directory is not
-empty — 0001/0002/0004 date from 2026-04. Do not assume a clean slate; a
-collision there once required a one-time renumber, recorded in that README.
+## 개발 조직 — 경로가 담당을 정한다
 
-## Architecture
+| 경로 | 담당 에이전트 |
+|---|---|
+| `rules/**`, `opensast/mois/**` | `rule-engineer` |
+| `opensast/{engines,orchestrator,sarif,llm,reports}/**` | `engine-engineer` |
+| `opensast/{api,services,db}/**`, `config.py`, `alembic/**` | `api-engineer` |
+| `frontend/**` | `frontend-engineer` |
+| `tests/**`, `.github/workflows/**` | `qa-verifier` |
+| `docs/adr/**`, `docs/ROADMAP.md`, `docs/plan/**` | `architect` |
+| `docs/ARCHITECTURE.md`, `docs/guide/**`, `README.md` | `docs-curator` |
+| git · PR · 버전 · 릴리스 | `release-manager` |
+| 변경분 보안 리뷰 (수정하지 않음) | `security-auditor` |
 
-### 2-Pass Analysis Model
+**운영 규약**
 
-1. **1st Pass (Fast)**: Opengrep, Bandit, ESLint, gosec — engines within a pass run concurrently
-2. **2nd Pass (Deep)**: CodeQL and SpotBugs
-3. **3rd Stage**: LLM triage — false positive probability, rationale, remediation
+- 한 작업에 한 담당. 두 영역에 걸치면 **작업을 쪼갠다**.
+- 순서는 **구현 → 검증(`qa-verifier`) → 리뷰(`security-auditor`) → 문서(`docs-curator`)
+  → 릴리스(`release-manager`)**. 건너뛰지 않는다.
+- 되돌리기 어려운 선택·엔진 구성 변경·MOIS 카탈로그 변경은 **`architect` 가 먼저**다.
+  구현부터 시작하지 않는다.
+- `security-auditor` 는 코드를 고치지 않는다. 지적 사항은 원래 담당에게 되돌린다.
+- 전체 조직도와 위임 규약: `.claude/README.md`. 작업 배정은 `/assign` 으로 시작한다.
 
-Partial results are never silent: a skipped 2nd pass or a truncated triage is
-recorded in `ScanResult.notes`.
+## 절대 규칙
 
-### System Layers
+이 일곱 가지는 어길 경우 되돌리기 어렵다. 일부는 `.claude/hooks/` 가 기계적으로 막는다.
 
-- **Frontend**: React + TypeScript + Tailwind CSS
-- **API**: FastAPI. Routes are thin adapters whose contract is to inject an
-  `ActorContext` into services — see the authorization rule below
-- **Orchestrator**: Celery + Redis
-- **Data**: PostgreSQL (results), Redis (cache/queue), local filesystem (`.opensast-work/`)
-- **LLM**: Ollama + Gemma (offline), Claude API (online)
+1. **서비스는 `ActorContext` 없이 만들지 않는다.** `None` 을 넘기면 `TypeError` 다.
+   라우트 안에서 `select(models.X)` 를 쓰지 않는다 — 테넌트 데이터를 만지는 모든
+   경로는 서비스를 경유한다. `_org_filter()` 는 deny-by-default 다 (ADR-0005).
+2. **설정의 단일 소스는 `opensast/config.py` 다.** 한계값·타임아웃·경로를 서비스나
+   미들웨어에 하드코딩하지 않는다 (ADR-0006).
+3. **결과를 조용히 줄이지 않는다.** 2차 Pass 생략이나 triage 상한은
+   `ScanResult.notes` 에 남는다. LLM triage 는 원본 Finding 을 **제거하지 않고
+   주석만 단다** — 행안부 대응에서 도구가 결과를 지우면 감리 근거가 무너진다.
+4. **의도된 취약 코드를 고치지 않는다.** `tests/vulnerable-samples/` 와
+   `tests/test_engine_integration.py` 는 탐지력의 근거다. 스캐너 예외는
+   `.gitguardian.yaml` 에 **경로로만** 둔다 (탐지기 단위 비활성화 금지).
+5. **시크릿 리터럴을 만들지 않는다.** 테스트 자격증명은 `tests/_credentials.py` 에서
+   런타임 생성한다. `*_PASSWORD` 류 식별자가 있는 줄에 따옴표 문자열을 같이 두지
+   않는다 — 시크릿 스캐너가 그 모양을 매칭한다.
+6. **문서는 성격을 정하고 `docs/README.md` 에 등록한다.** 등록되지 않은 문서는
+   아무도 갱신 책임을 지지 않는다. **ADR 은 수정하지 않는다** — 새 ADR 을 쓰고 옛
+   ADR 의 Status 만 `Superseded by ADR-NNNN` 으로 바꾼다. 새 ADR 번호는
+   `docs/adr/README.md` 에서 **다음 미사용 번호**를 확인하고 쓴다 (0003 은 결번,
+   과거 번호 충돌로 1회성 재배정 이력이 있다) (ADR-0007).
+7. **`master` 를 직접 조작하지 않는다.** 브랜치 → PR → squash merge → 브랜치 삭제.
+   `--force` 푸시 금지. 이력이 꼬이면 되살리지 말고 브랜치를 새로 만든다.
+   PR 전에 **`pytest` 전량 통과**를 확인한다.
 
-### Authorization — read this before touching routes
+공통: 타임스탬프는 timezone-aware UTC. 경로 봉쇄는 `Path.is_relative_to()`
+(문자열 prefix 비교 금지). 실패는 단위별로 격리하고 **로깅한다** — `except: pass` 금지.
 
-Services **require** an `ActorContext`; passing `None` raises `TypeError`.
-`BaseService._org_filter()` defaults to **deny** — it only passes rows matching
-the actor's `organization_id`. Full access requires `ActorContext.system()`.
+## 구조 (요약)
 
-- HTTP routes: `Depends(get_actor)` or `Depends(require_actor(*roles))`
-- Unauthenticated paths (login attempts): `ActorContext.anonymous()`
-- CLI / Celery / bootstrap: `ActorContext.system(reason=...)`
+- **2-Pass 분석**: 1차 Opengrep·Bandit·ESLint·gosec(동시 실행) → 2차 CodeQL·SpotBugs
+  → 3단계 LLM triage(Ollama+Gemma 오프라인 / Claude API 온라인). 구성 정본은
+  `opensast/engines/registry.py`.
+  **엔진 구성은 바뀔 예정이다**: ADR-0001(Accepted 2026-08-26)이 CodeQL·ESLint 를
+  제거하고 Joern(Primary) + Opengrep taint mode(Secondary)로 간다고 결정했다.
+  **구현은 미착수** — ADR-0002 가 rev.2 로 재작성돼 Accepted 되기 전에는 CodeQL·ESLint
+  어댑터를 제거하지 않는다 (0002 는 Joern v2.0.x 를 전제하나 현행은 4.0.x, 0004 는 여기 종속).
+  ADR 과 ARCHITECTURE 가 다른 것은 정상이다 — 전자는 결정 시점, 후자는 현재 시점을 말한다.
+- **계층**: React 프론트 · FastAPI(라우트는 액터를 주입하는 얇은 어댑터) ·
+  Celery+Redis 오케스트레이터 · PostgreSQL · 작업 파일은 `.opensast-work/`.
+- **49개 항목**의 단일 소스는 `opensast/mois/catalog.py` (정확히 49).
+  현재 커버리지 **46/49** — 미커버 SR1-15·SR5-3·SR5-6 은 C/C++ 메모리 취약점으로
+  지원 언어 밖이다.
+- **배포 프로파일** `OPENSAST_PROFILE`: `local`(기본, 보안 완화) / `docker` /
+  `cloud`(docs 비활성, 약한 시크릿·빈 CORS 로는 기동 거부).
+- **버전 정본은 `pyproject.toml`** (현재 0.5.0).
 
-Never construct a service without an actor to "make it work". See
-[ADR-0005](docs/adr/0005-authorization-boundary.md).
+## 지금의 우선순위 (ROADMAP)
 
-### Configuration — single source of truth
+**v0.6 검증 신뢰도**가 최우선이다 — 엔진과 Celery 가 전부 `MagicMock` 뒤에 있어
+**"테스트가 통과한다"가 "실제로 동작한다"를 의미하지 않는다.** 실행 통합
+테스트(`@pytest.mark.engine`, `celery_integration`), 엔진 구성 결정(ADR-0001/0002/0004),
+CI 품질 게이트, 스캔 취소·진행률이 여기에 속한다. 이후 v0.7 생태계 통합 →
+v0.8 규모·운영 → v1.0 KISA CC 인증 준비.
 
-`opensast/config.py` is the only source of truth for settings. Never hardcode a
-limit, timeout, or path in a service or middleware — read it from `Settings`.
-Docs describe that file; if they disagree, the code wins.
-See [ADR-0006](docs/adr/0006-configuration-single-source.md).
+## 자주 쓰는 명령
 
-### Schema changes
-
-`alembic/versions/` is the production path. Revision `0001` is **frozen explicit
-DDL** — never reintroduce `Base.metadata.create_all()` there, it breaks the whole
-chain. `db/migrate.py::auto_migrate()` is a development-only fallback, disabled
-in the cloud profile.
-
-## Tech Stack
-
-| Component | Technology |
-|-----------|------------|
-| Backend API | Python 3.12+, FastAPI, Celery, Redis |
-| Analysis Engines | Opengrep, CodeQL, SpotBugs, Bandit, ESLint, gosec |
-| Frontend | React, TypeScript, Tailwind CSS |
-| Database | PostgreSQL, Redis |
-| File Storage | Local filesystem (`.opensast-work/`, bind-mounted in Docker) |
-| AI/LLM | Ollama + Gemma (local), Claude API (cloud) |
-| Containerization | Docker, Docker Compose |
-| Reporting | SARIF, WeasyPrint (PDF), openpyxl (Excel) |
-
-## Security Weakness Categories (49 Items)
-
-| Category | Count | Examples |
-|----------|-------|----------|
-| Input Data Validation | 18 | SQL Injection, XSS, Path Traversal, OS Command Injection, SSRF |
-| Security Functions | 12 | Improper Authentication, Weak Cryptography, Hardcoded Credentials |
-| Time and State | 2 | TOCTOU, Infinite Loop/Recursion |
-| Error Handling | 3 | Information Exposure via Error Messages |
-| Code Errors | 7 | Null Pointer Dereference, Improper Resource Release, Deserialization |
-| Encapsulation | 5 | Session Data Exposure, Debug Code |
-| API Misuse | 2 | DNS Lookup Security Decisions, Vulnerable API Usage |
-
-Coverage is currently 46/49. The three uncovered items (SR1-15, SR5-3, SR5-6)
-are C/C++ memory issues, outside the supported language set.
-
-## Custom Rule Development
-
-Opengrep rules use YAML format with MOIS-specific metadata:
-
-```yaml
-rules:
-  - id: mois-sql-injection-mybatis
-    metadata:
-      mois_id: "SR1-1"  # MOIS security weakness ID
-      cwe: "CWE-89"
-      category: "입력데이터 검증 및 표현"
-      severity: "HIGH"
+```bash
+.venv/bin/python -m pytest -q --tb=short          # 전량 (~90s) — 모든 변경의 최소 기준
+.venv/bin/python -m pytest -m engine -q           # 실제 엔진 바이너리 필요 (기본 제외)
+.venv/bin/python -m pytest -m celery_integration -q
+cd frontend && npm test && npx tsc -b --noEmit
+semgrep --validate --config rules/opengrep        # 룰 문법
+opensast list-mois | opensast engines             # 카탈로그 / 설치된 엔진
+make up | make logs | make rebuild                # docker compose
 ```
 
-## Output Formats
+기본 `addopts` 가 `-m 'not engine and not celery_integration'` 이므로 무거운
+테스트에는 반드시 marker 를 단다.
 
-- **SARIF**: Standard static analysis format for tool interoperability
-- **HTML**: Interactive web-based reports
-- **PDF**: Official delivery reports (MOIS format compliant)
-- **Excel**: Remediation tracking sheets for auditing
+## 스킬
 
-## Working conventions
-
-- Run `pytest` before proposing a change; the suite is fast (~90s) and covers the
-  authorization boundary and known regressions.
-- Path containment is checked with `Path.is_relative_to()`, never string prefixes.
-- Timestamps are timezone-aware UTC everywhere.
-- Failures are isolated per unit (per engine, per finding) and **logged** —
-  never swallowed with a bare `except: pass`.
-- Test credentials are **generated at runtime** (`tests/_credentials.py`), never
-  written as literals. Do not put a quoted string on a line that also names a
-  `*_PASSWORD`-style identifier — secret scanners match on that shape.
-- `tests/test_engine_integration.py` and `tests/vulnerable-samples/` contain
-  **deliberately vulnerable** code used to verify the detection rules. Never
-  "fix" them. Scanner exceptions for them live in `.gitguardian.yaml`.
-- Every route that touches tenant data goes through a service with an
-  `ActorContext`. Never `select(models.X)` inside a route — that is how
-  `audit.py` and `organizations.py` kept leaking across organizations after
-  ADR-0005 landed everywhere else.
-- New documents must be registered in [`docs/README.md`](docs/README.md). An
-  unregistered document has no owner and silently rots.
+| 명령 | 용도 |
+|---|---|
+| `/assign <작업>` | 담당 배정 · 착수 계획 · 관문 정리 |
+| `/verify [full\|quick\|self-scan]` | CI 동등 로컬 검증 |
+| `/mois-rule <SR항목>` | MOIS 탐지 룰 작성 절차 |
+| `/adr <주제>` | ADR 작성 · 상태 전환 |
+| `/ship <주제>` | 브랜치 → PR → squash merge |

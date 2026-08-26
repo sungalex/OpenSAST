@@ -27,14 +27,15 @@
 ### Decision — [`adr/`](adr/README.md)
 
 목록·상태·번호 재배정 기록은 [`adr/README.md`](adr/README.md) 가 가진다.
-현재 0001·0002·0004(2026-04, Proposed) / 0005~0008(2026-08-25, Accepted).
+현재 0001(2026-04 작성, **2026-08-26 Accepted** — 구현 미착수) ·
+0002·0004(2026-04, Proposed) / 0005~0008(2026-08-25, Accepted).
 
 ### Plan
 
 | 문서 | 성격 | 상태 |
 |---|---|---|
 | [`ROADMAP.md`](ROADMAP.md) | 살아 있는 백로그 | 릴리스마다 갱신 |
-| [`plan/UPGRADE-PLAN-unified-analysis.md`](plan/UPGRADE-PLAN-unified-analysis.md) | ADR-0001 의 실행 계획 (2026-04-23) | 동결 — ADR-0001 이 Proposed 인 동안 실행되지 않는다 |
+| [`plan/UPGRADE-PLAN-unified-analysis.md`](plan/UPGRADE-PLAN-unified-analysis.md) | ADR-0001 의 실행 계획 (2026-04-23) | 동결 — ADR-0001 은 Accepted 지만 ADR-0002 가 rev.2 로 Accepted 되기 전에는 실행되지 않는다 |
 | [`LLM_ENHANCEMENT_PLAN.md`](LLM_ENHANCEMENT_PLAN.md) | LLM 계층 고도화 계획 (2026-04) | 동결 — 살아 있는 항목은 ROADMAP 으로 이관 |
 
 `plan/` 은 ROADMAP 한 줄로 담기지 않는 **다단계 실행 계획**을 둔다. ROADMAP 이
@@ -59,6 +60,7 @@
 |---|---|
 | [`install-windows-wsl2.md`](install-windows-wsl2.md) | Windows(WSL2) 전용 설치. 일반 설치는 [`guide/getting-started.md`](guide/getting-started.md) |
 | [`USER_GUIDE.md`](USER_GUIDE.md) | `guide/` 로 분할된 뒤 남은 리디렉션 스텁 |
+| [`../.claude/README.md`](../.claude/README.md) | 에이전트 개발조직 운영 규약 — 조직도·위임 규약·스킬·훅. 에이전트가 읽는 요약은 [`../CLAUDE.md`](../CLAUDE.md) |
 
 ### Proposal (동결)
 
