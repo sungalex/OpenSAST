@@ -67,7 +67,8 @@
    ADR 의 Status 만 `Superseded by ADR-NNNN` 으로 바꾼다. 새 ADR 번호는
    `docs/adr/README.md` 에서 **다음 미사용 번호**를 확인하고 쓴다 (0003 은 결번,
    과거 번호 충돌로 1회성 재배정 이력이 있다) (ADR-0007).
-7. **`master` 를 직접 조작하지 않는다.** 브랜치 → PR → squash merge → 브랜치 삭제.
+7. **`master` 를 직접 조작하지 않는다.** 브랜치 → PR → squash merge → 브랜치 삭제
+   (`/ship` 스킬이 이 절차를 담고 있다).
    `--force` 푸시 금지. 이력이 꼬이면 되살리지 말고 브랜치를 새로 만든다.
    PR 전에 **`pytest` 전량 통과**를 확인한다.
 
@@ -84,14 +85,12 @@
   **구현은 미착수** — ADR-0002 가 rev.2 로 재작성돼 Accepted 되기 전에는 CodeQL·ESLint
   어댑터를 제거하지 않는다 (0002 는 Joern v2.0.x 를 전제하나 현행은 4.0.x, 0004 는 여기 종속).
   ADR 과 ARCHITECTURE 가 다른 것은 정상이다 — 전자는 결정 시점, 후자는 현재 시점을 말한다.
-- **계층**: React 프론트 · FastAPI(라우트는 액터를 주입하는 얇은 어댑터) ·
-  Celery+Redis 오케스트레이터 · PostgreSQL · 작업 파일은 `.opensast-work/`.
 - **49개 항목**의 단일 소스는 `opensast/mois/catalog.py` (정확히 49).
   현재 커버리지 **46/49** — 미커버 SR1-15·SR5-3·SR5-6 은 C/C++ 메모리 취약점으로
   지원 언어 밖이다.
 - **배포 프로파일** `OPENSAST_PROFILE`: `local`(기본, 보안 완화) / `docker` /
   `cloud`(docs 비활성, 약한 시크릿·빈 CORS 로는 기동 거부).
-- **버전 정본은 `pyproject.toml`** (현재 0.5.0).
+- **버전 정본은 `pyproject.toml`**.
 
 ## 지금의 우선순위 (ROADMAP)
 
@@ -110,18 +109,7 @@ v0.8 규모·운영 → v1.0 KISA CC 인증 준비.
 cd frontend && npm test && npx tsc -b --noEmit
 semgrep --validate --config rules/opengrep        # 룰 문법
 opensast list-mois | opensast engines             # 카탈로그 / 설치된 엔진
-make up | make logs | make rebuild                # docker compose
 ```
 
 기본 `addopts` 가 `-m 'not engine and not celery_integration'` 이므로 무거운
 테스트에는 반드시 marker 를 단다.
-
-## 스킬
-
-| 명령 | 용도 |
-|---|---|
-| `/assign <작업>` | 담당 배정 · 착수 계획 · 관문 정리 |
-| `/verify [full\|quick\|self-scan]` | CI 동등 로컬 검증 |
-| `/mois-rule <SR항목>` | MOIS 탐지 룰 작성 절차 |
-| `/adr <주제>` | ADR 작성 · 상태 전환 |
-| `/ship <주제>` | 브랜치 → PR → squash merge |
