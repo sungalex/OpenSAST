@@ -114,10 +114,14 @@ github/gh-codeql`) 또는 CodeQL CLI 번들을 직접 받아 설치한다.
 > ⚠️ **CodeQL 은 "공개 비상업 오픈소스 프로젝트에 한해 무료"** 라는 GitHub
 > 라이선스 제약이 있다. 공공기관·감리 업무 등 **상업적 진단에 사용하려면 GitHub
 > Advanced Security 라이선스가 필요하다.** 이 제약 때문에
-> [ADR-0001](../adr/0001-unified-analysis-pipeline.md) 은 CodeQL 을 제거하고
-> Joern 으로 대체할 것을 제안했고(현재 Proposed), 버전 고정 전략은
-> [ADR-0002](../adr/0002-joern-version-pinning.md) 에 있다. 아직 코드에는 CodeQL
-> 어댑터가 남아 있으므로, 상업 사용 시에는 CodeQL 을 켜지 않는 편이 안전하다.
+> [ADR-0001](../adr/0001-unified-analysis-pipeline.md) 이 CodeQL 을 제거하고
+> Joern 으로 대체하기로 **확정**했다 (Accepted, 2026-08-26). 다만 **실행은
+> 아직**이라 코드에는 CodeQL 어댑터가 남아 있다 — 버전 고정 ADR
+> ([ADR-0002](../adr/0002-joern-version-pinning.md))이 전제 노후화로 막혀 있기
+> 때문이다. 진행 상황은 [`ROADMAP.md`](../ROADMAP.md) §2.2 를 보라.
+>
+> **그때까지 상업 진단에서는 CodeQL 을 설치하지 않는 것이 안전한 기본값이다.**
+> 미설치 엔진은 자동으로 건너뛰므로 스캔은 정상 동작한다.
 
 #### Docker 이미지에 들어 있는 것
 

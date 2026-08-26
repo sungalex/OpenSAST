@@ -8,7 +8,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Core Design Principles
 
-- **Multi-engine orchestration**: Combines multiple open-source SAST engines (Opengrep, CodeQL, SpotBugs, Bandit, ESLint, gosec) to maximize detection and minimize false positives
+- **Multi-engine orchestration**: Combines multiple open-source SAST engines (Opengrep, CodeQL, SpotBugs, Bandit, ESLint, gosec) to maximize detection and minimize false positives.
+  **The engine set is scheduled to change**: [ADR-0001](docs/adr/0001-unified-analysis-pipeline.md)
+  (Accepted 2026-08-26) drops CodeQL and ESLint for Joern. Not implemented yet —
+  do not remove those adapters until ADR-0002 is revised and accepted.
 - **CWE-based rule mapping**: Maps all 49 MOIS security weakness items to CWE IDs
 - **LLM-based false positive filtering**: Uses AI (Ollama/Gemma locally, Claude API for cloud) to classify results — it **annotates, never removes**, original findings
 - **YAML-based custom rules**: Extensible rule system for Opengrep
