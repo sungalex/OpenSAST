@@ -47,8 +47,10 @@ Thumbs.db
 *.swp
 *.swo
 
-# Claude Code local settings
-.claude/
+# Claude Code — 팀 공유 구성(agents · rules · skills · hooks · settings.json)은
+# 추적하고, 개인 설정과 워크트리만 제외한다
+.claude/settings.local.json
+.claude/worktrees/
 
 # OpenSAST work dir (scan extractions, temp data)
 .opensast-work/
