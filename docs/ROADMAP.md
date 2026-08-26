@@ -48,15 +48,28 @@
 
 ### 2.2 엔진 구성 결정 마무리
 
-4월에 발행된 ADR 3건이 **Proposed** 로 멈춰 있다. 코드는 여전히 CodeQL·ESLint 를
-포함하고, 문서는 Joern 을 가리킨다. 이 상태가 길어질수록 "무엇이 진짜인가" 가
-흐려진다.
+[ADR-0001](adr/0001-unified-analysis-pipeline.md) 이 2026-08-26 **Accepted** 로
+확정됐다 — CodeQL·ESLint 를 제거하고 Joern(Primary) + Opengrep taint mode(Secondary)
+로 간다. 남은 것은 실행이고, 그 앞에 버전 고정 문제가 막고 있다.
 
-- [ADR-0001](adr/0001-unified-analysis-pipeline.md) — Joern 대체 / CodeQL·ESLint 제거:
-  Accepted 전환 또는 Rejected 명시
-- [ADR-0002](adr/0002-joern-version-pinning.md) — Joern 버전 고정: 위 결정에 종속
-- [ADR-0004](adr/0004-engine-version-governance.md) — 엔진 버전 거버넌스 3-Tier
-- 실행 계획은 [`plan/UPGRADE-PLAN-unified-analysis.md`](plan/UPGRADE-PLAN-unified-analysis.md)
+**선행 — ADR-0002 rev.2 (차단 요인)**
+
+- [ADR-0002](adr/0002-joern-version-pinning.md) 는 Joern `v2.0.x` 라인을 전제로
+  쓰였으나 현행은 `4.0.x` 다 (2026-08-25 기준 v4.0.611). 대상 라인 교체 + 4.0
+  기준 CLI·DSL breaking change 재조사가 필요하다
+- `scripts/joern/select_version.py` + 골든 픽스처 신설 — 버전 선정 절차 자체가 없다
+- 선정 결과를 `.env.versions` 에 커밋 (`JOERN_VERSION` / `JOERN_SHA256`)
+- 위가 끝나면 [ADR-0004](adr/0004-engine-version-governance.md) 도 함께 Accepted
+
+**실행**
+
+- `opensast/engines/joern.py` 어댑터 신설, 레지스트리·파이프라인 배선
+- JS/TS 커버리지를 `rules/opengrep/javascript` 로 이관 후 ESLint 제거
+- CodeQL 어댑터 제거 — 그전까지는 미설치 시 자동 skip + 라이선스 경고로 완화
+- 단계별 계획은 [`plan/UPGRADE-PLAN-unified-analysis.md`](plan/UPGRADE-PLAN-unified-analysis.md)
+
+> §2.1 의 실행 통합 테스트가 이 작업의 실질적 전제다. 엔진을 교체하면서 회귀를
+> 잡을 수단이 없으면 교체 자체가 위험하다.
 
 ### 2.3 CI 품질 게이트
 
@@ -155,7 +168,7 @@
 |---|---|---|---|
 | 1 | **실행 통합 테스트 부재** — 엔진·Celery 가 전부 목(mock) 뒤에 있다 | 엔진 호출 규약이 깨져도 CI 가 초록. 상용 도구로서 신뢰 문제 | v0.6 최우선. marker 로 분리해 로컬은 빠르게, CI 는 전량 |
 | 2 | **LLM 비용** — 대형 프로젝트 triage | 프로덕션 채택 블로커 | 캐시가 실제로 동작하게 배선 완료. 토큰 예산 카운팅은 v0.8 |
-| 3 | **CodeQL 라이선스** — GitHub Advanced Security 약관 | 공공·감리 등 상업 진단에 그대로 쓸 수 없다 | 대안 조사는 이미 끝났다 — [ADR-0001](adr/0001-unified-analysis-pipeline.md) 이 Joern 대체를, [ADR-0002](adr/0002-joern-version-pinning.md) 가 버전 고정 전략을 제안한 상태(둘 다 **Proposed**). 남은 일은 조사가 아니라 **두 ADR 의 Accepted 전환과 실행**이다. 그전까지는 [`guide/pipeline-and-engines.md`](guide/pipeline-and-engines.md) 의 라이선스 경고로 막는다 |
+| 3 | **CodeQL 라이선스** — GitHub Advanced Security 약관 | 공공·감리 등 상업 진단에 그대로 쓸 수 없다 | **대체 방향은 확정됐다** — [ADR-0001](adr/0001-unified-analysis-pipeline.md) Accepted (2026-08-26). 남은 차단 요인은 [ADR-0002](adr/0002-joern-version-pinning.md) 의 전제 노후화(v2.0.x 기준 → 현행 4.0.x)이며 rev.2 재작성이 필요하다. 그전까지는 CodeQL 미설치 시 자동 skip + [`guide/pipeline-and-engines.md`](guide/pipeline-and-engines.md) 의 라이선스 경고로 완화 |
 | 4 | **KISA CC 요건 미구체화** | v1.0 일정 변동 | v0.6 중 별도 조사 트랙 |
 | 5 | **엔진 바이너리 배포 복잡성** | 온보딩 마찰 | CodeQL/SpotBugs 포함 "fat" 이미지 별도 태그(`opensast:X.Y-full`) |
 | 6 | **triage 상한 정책의 규정 적합성** | 미판정 잔여가 감사에서 문제될 수 있음 | 행안부 대응 관점 확인 후 chunked task 전환 여부 결정 |

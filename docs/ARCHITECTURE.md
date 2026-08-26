@@ -481,6 +481,13 @@ as-built 문서이므로 **지금 없는 것**도 정직하게 적는다. 해결
 - **SSRF 방어가 스킴 단위** — 내부 호스트·메타데이터 엔드포인트 차단 없음
 - **MOIS 커버리지 46/49** — 미커버 3개(SR1-15, SR5-3, SR5-6)는 C/C++ 메모리
   취약점으로 현재 지원 언어 범위 밖
+- **엔진 구성이 확정 결정과 다르다** — [ADR-0001](adr/0001-unified-analysis-pipeline.md)
+  이 CodeQL·ESLint 제거와 Joern 대체를 확정(Accepted, 2026-08-26)했으나 **아직
+  실행되지 않았다.** 이 문서는 as-built 이므로 현재 있는 것(CodeQL·ESLint 어댑터)
+  을 그대로 적는다. 차단 요인은 [ADR-0002](adr/0002-joern-version-pinning.md) 의
+  전제 노후화이며 진행 상황은 [`ROADMAP.md`](ROADMAP.md) §2.2 에 있다.
+  **상업 진단에서는 CodeQL 을 켜지 않는 편이 안전하다** (GitHub Advanced Security
+  라이선스)
 
 ---
 

@@ -1,6 +1,15 @@
 # ADR-0004: SAST 엔진 버전 거버넌스 3-Tier 정책
 
-- 상태(Status): **Proposed** — Joern pilot(ADR-0002) 검증 후 Phase 4 초에 Opengrep 적용 시 **Accepted**
+- 상태(Status): **Proposed — 선행 ADR 대기** (2026-08-26 확인)
+
+> 이 ADR 의 3-Tier 정책 자체(Tier 1 엄격 고정 / Tier 2 핀+스모크 / Tier 3 상한만)는
+> 엔진 선택과 무관하게 유효하다. 다만 Accepted 조건이 **Joern pilot 검증**이고,
+> 그 pilot 은 [ADR-0002](0002-joern-version-pinning.md) 가 전제 노후화로 보류된
+> 상태라 진행할 수 없다. ADR-0002 rev.2 가 나오면 이 문서도 함께 확정한다.
+>
+> Tier 3(Bandit, gosec)와 Tier 2(SpotBugs)는 지금도 적용 가능하다. 다만 정책만
+> 따로 발효시키면 `.env.versions` 라는 단일 선언 지점이 없는 채로 Tier 만 남으므로,
+> 함께 가는 편이 낫다고 판단해 보류한다.
 - 작성일: 2026-04-24
 - 작성자: OpenSAST 엔진 유지보수 팀 · 보안팀
 - 관련 문서:

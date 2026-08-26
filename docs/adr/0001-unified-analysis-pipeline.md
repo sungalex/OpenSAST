@@ -1,6 +1,10 @@
 # ADR-0001: 2-Pass 분석 파이프라인의 단일 오케스트레이션 통합
 
-- 상태(Status): **Proposed (rev.2)** — 합의 이후 v0.5.0 마일스톤에서 단계적 도입
+- 상태(Status): **Accepted** (2026-08-26 확정) — 방향은 확정됐고 **구현은 미착수**다.
+  실행 단계는 [`docs/plan/UPGRADE-PLAN-unified-analysis.md`](../plan/UPGRADE-PLAN-unified-analysis.md),
+  일정은 [`ROADMAP.md`](../ROADMAP.md) §2.2 가 가진다. 현재 코드에 무엇이 있는지는
+  [`ARCHITECTURE.md`](../ARCHITECTURE.md) 가 정본이며, 이 ADR 과 다른 것이 정상이다
+  (결정 시점 ≠ 반영 시점).
 - 작성일: 2026-04-23
 - 작성자: OpenSAST 아키텍처 팀
 - 관련 문서: `docs/ARCHITECTURE.md`, `CLAUDE.md`, `opensast/orchestrator/pipeline.py`, `opensast/sarif/merge.py`, `opensast/orchestrator/tasks.py`
@@ -9,6 +13,11 @@
 
 - v1 (2026-04-23): 초안. 2-Pass 모델 통합, Celery chord + Redis pub/sub 기반 단일 오케스트레이션 제안.
 - v2 (2026-04-23): CodeQL 제거(비상업 소스 이용 라이선스 이슈), ESLint 제거(JS/TS 는 Opengrep 룰로 커버). CodeQL 대체로 **Joern(Primary) + Opengrep taint mode(Secondary)** 도입. 엔진 목록·다이어그램·큐 배정·레지스트리 예시 전면 교체.
+- v3 (2026-08-26): **Accepted 로 전환.** 본문 결정 내용은 바꾸지 않았다. 확정 근거는
+  CodeQL 의 GitHub Advanced Security 라이선스 제약이 공공·감리 등 상업 진단이라는
+  이 프로젝트의 핵심 사용처와 정면으로 충돌한다는 점이며, 이는 시간이 지나도
+  달라지지 않았다. 후속 두 ADR(0002 버전 고정, 0004 거버넌스)은 아래 「선행 조건」
+  참조 — **여전히 Proposed** 다.
 
 ## 1. 맥락 (Context)
 
@@ -158,6 +167,27 @@ CodeQL 이 수행하던 "다국어 인터프로시저 테인트·데이터플로
 4단계(Chord & partial): 오케스트레이션을 chord 로 재구성, Redis pub/sub 진행 이벤트, UI 부분 상태 표시.
 5단계(LLM mode): Triage 를 deferred/streaming/off 모드 선택 가능하게.
 6단계(Cleanup): `enable_second_pass` 를 경고화하고 v1.0 에서 제거. `ARCHITECTURE.md`/`README.md`/`USER_GUIDE.md` 의 2-Pass 설명을 "실행 모드 + 엔진 메타데이터" 관점으로 재작성.
+
+## 6.5 선행 조건 — 이 결정을 실행하기 전에 (2026-08-26 추가)
+
+Accepted 는 "하기로 정했다" 이지 "했다" 가 아니다. 실행에 착수하기 전에 다음이
+먼저 해결돼야 한다.
+
+| # | 선행 조건 | 현재 상태 |
+|---|---|---|
+| 1 | Joern 버전 선정·고정 ([ADR-0002](0002-joern-version-pinning.md)) | **막힘** — ADR-0002 는 `v2.0.x` 라인을 전제하나 Joern 은 이미 `4.0.x` 다 (2026-08-25 기준 v4.0.611). rev.2 로 재작성해야 Accepted 가 가능하다 |
+| 2 | 엔진 버전 거버넌스 ([ADR-0004](0004-engine-version-governance.md)) | 조건부 — 1번의 pilot 검증에 종속 |
+| 3 | `opensast/engines/joern.py` 어댑터 | 미구현 |
+| 4 | 실행 통합 테스트 (`@pytest.mark.engine`) | 미구현 — 엔진을 교체하면서 회귀를 잡을 수단이 없다. ROADMAP v0.6 §2.1 |
+| 5 | JS/TS 커버리지 이관 (`rules/opengrep/javascript`) | ESLint 제거의 전제. 미검증 |
+
+**1번이 풀리기 전에는 코드에 손대지 않는다.** 버전이 고정되지 않은 엔진을
+파이프라인에 넣으면 룰 오동작을 버전 부동과 구분할 수 없다 — ADR-0002 가 존재하는
+이유가 그것이다.
+
+그동안의 완화책: CodeQL 은 설치가 선택이고 미설치 시 자동으로 건너뛴다.
+상업 진단에서의 라이선스 주의는
+[`guide/pipeline-and-engines.md`](../guide/pipeline-and-engines.md) 에 명시했다.
 
 ## 7. 결론
 

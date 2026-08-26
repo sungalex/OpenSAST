@@ -27,19 +27,25 @@ KISA CC 인증 트랙에서 설계 근거 추적성은 요구사항이 되기 �
 
 | # | 제목 | 상태 | 날짜 |
 |---|---|---|---|
-| [0001](0001-unified-analysis-pipeline.md) | 2-Pass 분석 파이프라인의 단일 오케스트레이션 통합 (rev.2) | Proposed | 2026-04-23 |
-| [0002](0002-joern-version-pinning.md) | Joern 엔진 버전 고정 전략 | Proposed | 2026-04-24 |
+| [0001](0001-unified-analysis-pipeline.md) | 2-Pass 분석 파이프라인의 단일 오케스트레이션 통합 (rev.3) | **Accepted** | 2026-04-23 (2026-08-26 확정) |
+| [0002](0002-joern-version-pinning.md) | Joern 엔진 버전 고정 전략 | Proposed *(전제 노후화 — rev.2 필요)* | 2026-04-24 |
 | 0003 | *(결번)* | — | — |
-| [0004](0004-engine-version-governance.md) | SAST 엔진 버전 거버넌스 3-Tier 정책 | Proposed | 2026-04-24 |
+| [0004](0004-engine-version-governance.md) | SAST 엔진 버전 거버넌스 3-Tier 정책 | Proposed *(0002 대기)* | 2026-04-24 |
 | [0005](0005-authorization-boundary.md) | 인가 강제 지점을 서비스 계층에서 라우트 계약으로 끌어올린다 | Accepted | 2026-08-25 |
 | [0006](0006-configuration-single-source.md) | 설정 진실의 원천을 하나로 만들고 배포 프로파일을 산출물에서 명시한다 | Accepted | 2026-08-25 |
 | [0007](0007-documentation-architecture.md) | 문서를 성격별로 재편하고 ADR 을 도입한다 | Accepted | 2026-08-25 |
 | [0008](0008-triage-concurrency.md) | Triage 를 동시 실행으로 전환하고 조용한 실패를 없앤다 | Accepted | 2026-08-25 |
 
-**0001·0002·0004 는 아직 Proposed 다.** 엔진 구성을 실제로 바꾸기 전(Joern 도입,
-CodeQL·ESLint 제거) 이 세 건의 상태를 먼저 정리해야 한다. 현재 코드는 여전히
-CodeQL·ESLint 를 포함하며, 이는 결정이 뒤집혔다는 뜻이 아니라 **아직 실행되지
-않았다**는 뜻이다.
+**ADR-0001 은 2026-08-26 에 Accepted 로 확정됐다** — CodeQL·ESLint 를 제거하고
+Joern 으로 대체한다는 방향은 결정됐다. 다만 **구현은 미착수**이며, 현재 코드는
+여전히 CodeQL·ESLint 를 포함한다. ADR 과 `ARCHITECTURE.md` 가 다른 것은 정상이다
+— 전자는 결정 시점, 후자는 현재 시점을 말한다.
+
+**0002·0004 는 Proposed 로 남는다.** 0002 는 Joern `v2.0.x` 라인을 전제로 쓰였는데
+현행은 `4.0.x`(2026-08-25 기준 v4.0.611)라 rev.2 재작성 없이는 Accepted 가 될 수
+없고, 0004 는 그 pilot 에 종속된다. **이 두 건이 풀리기 전에는 엔진 교체 코드에
+손대지 않는다** — 버전이 고정되지 않은 엔진은 룰 오동작과 버전 부동을 구분할 수
+없게 만든다.
 
 ### 번호 재배정 기록 (2026-08-26, 1회성)
 
