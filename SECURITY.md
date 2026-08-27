@@ -3,7 +3,7 @@
 ## Supported Versions / 지원 버전
 
 | Version | Supported |
-|---------|-----------|
+| ------- | --------- |
 | 0.4.x   | Yes       |
 | < 0.4   | No        |
 
@@ -18,7 +18,7 @@ Only the latest minor release (0.4.x) receives security patches.
 
 If you discover a security vulnerability, please **do NOT open a public issue**. Instead, report it through one of the following channels:
 
-1. **Email / 이메일**: [security@opensast.dev](mailto:security@opensast.dev)
+1. **Email / 이메일**: [cloudallera+security@gmail.com](mailto:cloudallera+security@gmail.com)
 2. **GitHub Security Advisories**: [Report a vulnerability](https://github.com/sungalex/OpenSAST/security/advisories/new)
 
 ### 신고 시 포함할 정보 / What to Include
@@ -32,12 +32,12 @@ If you discover a security vulnerability, please **do NOT open a public issue**.
 
 ## Response Timeline / 대응 일정
 
-| Stage | Timeline |
-|-------|----------|
-| 접수 확인 (Acknowledgment) | 72시간 이내 (within 72 hours) |
-| 초기 분석 (Initial assessment) | 7일 이내 (within 7 days) |
-| 패치 목표 (Patch target) | 30일 이내 (within 30 days) |
-| 공개 (Disclosure) | 패치 배포 후 (after patch release) |
+| Stage                          | Timeline                           |
+| ------------------------------ | ---------------------------------- |
+| 접수 확인 (Acknowledgment)     | 72시간 이내 (within 72 hours)      |
+| 초기 분석 (Initial assessment) | 7일 이내 (within 7 days)           |
+| 패치 목표 (Patch target)       | 30일 이내 (within 30 days)         |
+| 공개 (Disclosure)              | 패치 배포 후 (after patch release) |
 
 긴급도가 높은 취약점(CVSS 9.0+)은 가능한 한 빠르게 대응합니다.
 Critical vulnerabilities (CVSS 9.0+) will be prioritized and addressed as quickly as possible.
@@ -50,14 +50,14 @@ Critical vulnerabilities (CVSS 9.0+) will be prioritized and addressed as quickl
 
 The security policy covers the following components:
 
-| Component | Scope |
-|-----------|-------|
-| 코어 코드 (Core code) | `opensast/` Python 패키지 전체 |
-| 분석 룰 (Rules) | `rules/` 디렉토리의 Opengrep YAML 룰 |
-| API | FastAPI 기반 REST API 엔드포인트 |
-| 프론트엔드 (Frontend) | `frontend/` React 웹 UI |
+| Component                     | Scope                                  |
+| ----------------------------- | -------------------------------------- |
+| 코어 코드 (Core code)         | `opensast/` Python 패키지 전체         |
+| 분석 룰 (Rules)               | `rules/` 디렉토리의 Opengrep YAML 룰   |
+| API                           | FastAPI 기반 REST API 엔드포인트       |
+| 프론트엔드 (Frontend)         | `frontend/` React 웹 UI                |
 | Docker 이미지 (Docker images) | 공식 Dockerfile 및 docker-compose 설정 |
-| CI/CD | GitHub Actions 워크플로우 설정 |
+| CI/CD                         | GitHub Actions 워크플로우 설정         |
 
 ### 범위 외 항목 / Out of Scope
 
